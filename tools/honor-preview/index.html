@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拉丁主题商店预览图生成器</title>
+  <link rel="stylesheet" href="style.css?v=20260703-export-all-platforms">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <a class="back-link" href="../../index.html">返回</a>
+      <div>
+        <h1>拉丁主题商店预览图生成器</h1>
+        <p>以图片画布为中心，拖动底图、文字和气泡，完成多平台预览图输出。</p>
+      </div>
+    </header>
+
+    <section class="setup-panel" aria-label="项目设置">
+      <div class="setup-grid">
+        <label class="upload-tile">
+          <span class="label">字体</span>
+          <strong id="fontFileName">TTF / OTF</strong>
+          <input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2,font/*">
+        </label>
+
+        <label class="upload-tile">
+          <span class="label">图片</span>
+          <strong id="imageFileName">JPG / PNG</strong>
+          <input id="imageFile" type="file" accept="image/*">
+        </label>
+      </div>
+
+      <div class="setup-export">
+        <button id="exportHonorConfig" type="button">荣耀参数</button>
+        <button id="exportOppoConfig" type="button">OPPO 参数</button>
+        <button id="exportVivoConfig" type="button">vivo 参数</button>
+        <button class="primary" id="exportZip" disabled>导出三平台 ZIP</button>
+      </div>
+    </section>
+
+    <section class="editor-shell" aria-label="单图编辑">
+      <aside class="layer-panel">
+        <div class="sidebar-title">
+          <strong>模板</strong>
+          <div class="platform-tabs" role="tablist" aria-label="平台">
+            <button class="is-active" type="button" data-platform-tab="honor">荣耀 <span id="honorTemplateCount">6</span></button>
+            <button type="button" data-platform-tab="oppo">OPPO <span id="oppoTemplateCount">6</span></button>
+            <button type="button" data-platform-tab="vivo">vivo <span id="vivoTemplateCount">2</span></button>
+          </div>
+        </div>
+        <div class="platform-section" data-platform-section="honor">
+          <div id="honorTemplateList" class="template-list"></div>
+        </div>
+        <div class="platform-section" data-platform-section="oppo">
+          <div id="oppoTemplateList" class="template-list"></div>
+        </div>
+        <div class="platform-section" data-platform-section="vivo">
+          <div id="vivoTemplateList" class="template-list"></div>
+        </div>
+      </aside>
+
+      <section class="canvas-workspace">
+        <div class="canvas-toolbar">
+          <div class="active-summary">
+            <span class="label">当前模板</span>
+            <strong id="activeFileName">pic_font_default.jpg</strong>
+            <span id="activeMeta">640×458</span>
+          </div>
+          <div class="tool-actions">
+            <div class="action-group">
+              <label class="overflow-toggle">
+                <input id="imageOverflowVisible" type="checkbox" checked>
+                画布外
+              </label>
+              <span>背景图</span>
+              <button id="editImageMode" type="button" disabled>编辑</button>
+              <button id="resetImagePosition" disabled>重置</button>
+            </div>
+            <div class="mask-control" id="maskControl" aria-label="蒙版控制">
+              <span>蒙版</span>
+              <button class="swatch is-active" type="button" data-mask-color="#ffffff" title="纯白蒙版">白</button>
+              <button class="swatch" type="button" data-mask-color="#000000" title="纯黑蒙版">黑</button>
+              <input id="maskOpacity" type="range" min="0" max="100" value="0">
+              <strong id="maskOpacityValue">0%</strong>
+            </div>
+            <label class="reference-control" id="referenceControl">
+              <span class="reference-toggle">
+                <input id="referenceVisible" type="checkbox">
+                原始对比
+              </span>
+              <input id="referenceOpacity" type="range" min="0" max="100" value="45">
+              <strong id="referenceOpacityValue">45%</strong>
+            </label>
+            <label class="zoom-control">
+              <span>视图</span>
+              <input id="zoomRange" type="range" min="25" max="120" value="62">
+              <strong id="zoomValue">62%</strong>
+            </label>
+            <button id="downloadCurrent" disabled>下载本张 JPG</button>
+          </div>
+        </div>
+
+        <div class="workspace-body">
+          <div id="canvasStage" class="canvas-stage">
+            <div class="canvas-frame" id="canvasFrame">
+              <div class="image-overflow-preview" id="imageOverflowPreview" aria-hidden="true">
+                <div class="image-overflow-box"></div>
+              </div>
+              <canvas id="editorCanvas" width="640" height="458"></canvas>
+              <div class="image-overlay" id="imageOverlay" aria-hidden="true">
+                <div class="image-box"></div>
+                <button class="image-handle image-handle-nw" type="button" data-image-handle="nw"></button>
+                <button class="image-handle image-handle-ne" type="button" data-image-handle="ne"></button>
+                <button class="image-handle image-handle-se" type="button" data-image-handle="se"></button>
+                <button class="image-handle image-handle-sw" type="button" data-image-handle="sw"></button>
+              </div>
+            </div>
+          </div>
+
+          <section class="param-panel" aria-label="对象参数">
+            <div class="param-head">
+              <strong>对象检查器</strong>
+              <span>文本、气泡和底图可在画布中拖动调整</span>
+            </div>
+            <div class="text-controls">
+              <div class="selected-layer">
+                <span class="label" id="activeLayerKind">当前文字层</span>
+                <strong id="activeLayerName">MBLatant</strong>
+              </div>
+              <div class="page-font-panel">
+                <div>
+                  <strong>当前页字号</strong>
+                  <span>本图所有文字层分别增减</span>
+                </div>
+                <div class="font-size-group">
+                  <button id="decreaseAllTextSize" type="button">-1</button>
+                  <button id="increaseAllTextSize" type="button">+1</button>
+                </div>
+              </div>
+              <section class="group-panel" aria-label="文本图层编组">
+                <div class="group-head">
+                  <strong>文本编组</strong>
+                  <span id="activeGroupName">未编组</span>
+                </div>
+                <label class="group-name-field">
+                  <span class="label">组名</span>
+                  <input id="textGroupName" type="text" value="" autocomplete="off" placeholder="例如：桌面图标">
+                </label>
+                <div id="textGroupLayerList" class="group-layer-list"></div>
+                <label id="layerTextContentField" class="text-content-field is-hidden">
+                  <span class="label">文本内容</span>
+                  <textarea id="layerTextContent" rows="4" autocomplete="off"></textarea>
+                </label>
+                <div class="group-actions">
+                  <button id="applyTextGroup" type="button">应用编组</button>
+                  <button id="ungroupTextSelection" type="button">释放所选</button>
+                  <button id="ungroupTemplateTextGroups" type="button">释放本图</button>
+                  <button id="ungroupAllTextGroups" type="button">释放全部</button>
+                </div>
+              </section>
+              <div class="geometry-controls">
+                <label>
+                  <span id="layerXLabel">X</span>
+                  <input id="layerX" type="number" step="1">
+                </label>
+                <label>
+                  <span id="layerYLabel">Y</span>
+                  <input id="layerY" type="number" step="1">
+                </label>
+                <label>
+                  <span id="layerSizeLabel">字号</span>
+                  <input id="layerSize" type="number" step="1" min="1">
+                </label>
+                <label>
+                  <span id="layerLineHeightLabel">行距</span>
+                  <input id="layerLineHeight" type="number" step="1" min="0">
+                </label>
+                <label>
+                  <span>垂直居中</span>
+                  <input id="layerVerticalCenter" type="checkbox" checked>
+                </label>
+                <div class="control-field">
+                  <span>水平对齐</span>
+                  <div class="segmented-control" id="layerTextAlign" role="group" aria-label="文字水平对齐">
+                    <button type="button" data-text-align="left">左</button>
+                    <button type="button" data-text-align="center">中</button>
+                    <button type="button" data-text-align="right">右</button>
+                  </div>
+                </div>
+                <label>
+                  <span>颜色</span>
+                  <input id="layerColor" type="color">
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="../../assets/vendor/jszip.min.js"></script>
+  <script src="main.js?v=20260703-export-all-platforms"></script>
+</body>
+</html>

@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网格字体工具 v2</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 顶部 */
+    .toolbar {
+      background: #16213e;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid #0f3460;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .toolbar h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #e94560;
+    }
+
+    .toolbar-info {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .toolbar-info span { color: #e94560; font-weight: 600; }
+
+    .tb-spacer { flex: 1; }
+
+    .tb-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .tb-btn-primary { background: #e94560; color: white; }
+    .tb-btn-primary:hover { background: #c73650; }
+    .tb-btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    .tb-btn-secondary { background: #0f3460; color: #ccc; }
+    .tb-btn-secondary:hover { background: #1a4a80; color: white; }
+
+    /* 主布局 */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* 左面板 */
+    .panel-left {
+      width: 280px;
+      background: #16213e;
+      padding: 16px;
+      overflow-y: auto;
+      border-right: 1px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    .sec { margin-bottom: 20px; }
+
+    .sec-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #e94560;
+      margin-bottom: 10px;
+    }
+
+    /* 字体上传 */
+    .font-drop {
+      border: 2px dashed #0f3460;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .font-drop:hover, .font-drop.dragover { border-color: #e94560; background: rgba(233,69,96,0.05); }
+    .font-drop input { display: none; }
+    .font-drop-icon { font-size: 24px; margin-bottom: 4px; }
+    .font-drop-text { font-size: 12px; color: #777; }
+    .font-name { margin-top: 6px; font-size: 11px; color: #4ade80; word-break: break-all; display: none; }
+
+    /* 字符输入 */
+    .char-ta {
+      width: 100%;
+      min-height: 80px;
+      background: #0f3460;
+      border: 1px solid #1a4a80;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 8px;
+      font-size: 13px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .char-ta:focus { outline: none; border-color: #e94560; }
+    .char-hint { font-size: 11px; color: #555; margin-top: 4px; }
+
+    /* 网格预设 */
+    .grid-presets { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .grid-btn {
+      padding: 4px 10px;
+      border: 1px solid #0f3460;
+      border-radius: 4px;
+      background: transparent;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .grid-btn:hover { border-color: #e94560; color: #e94560; }
+    .grid-btn.active { background: #e94560; border-color: #e94560; color: white; font-weight: 600; }
+
+    /* 提示框 */
+    .hint {
+      background: rgba(233,69,96,0.1);
+      border: 1px solid rgba(233,69,96,0.3);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #999;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .hint strong { color: #e94560; }
+
+    /* 选中信息 */
+    .sel-info {
+      background: #0f3460;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .sel-count { color: #e94560; font-weight: 700; }
+
+    /* 滑块 */
+    .slider-row { margin-bottom: 12px; }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 5px;
+    }
+
+    .slider-label .val { color: #e94560; font-weight: 600; min-width: 40px; text-align: right; }
+
+    .slider-row-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: #0f3460;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #e94560;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      width: 52px;
+      padding: 3px 5px;
+      background: #0f3460;
+      border: 1px solid #1a4a80;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    input[type="number"]:focus { outline: none; border-color: #e94560; }
+
+    /* 画布区 */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #0f0f1e;
+      overflow: auto;
+      min-width: 0;
+    }
+
+    #gridCanvas {
+      cursor: crosshair;
+      border: 1px solid #0f3460;
+      max-width: 100%;
+      max-height: calc(100vh - 80px);
+    }
+
+    /* 右面板 */
+    .panel-right {
+      width: 260px;
+      background: #16213e;
+      padding: 16px;
+      overflow-y: auto;
+      border-left: 1px solid #0f3460;
+      flex-shrink: 0;
+    }
+
+    /* 颜色 */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .color-row label { font-size: 12px; color: #888; width: 40px; }
+
+    input[type="color"] {
+      width: 36px;
+      height: 26px;
+      border: 1px solid #1a4a80;
+      border-radius: 4px;
+      padding: 1px;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .color-hex { font-size: 11px; color: #666; font-family: monospace; }
+
+    /* 线宽 */
+    .line-width-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .line-width-row label { font-size: 12px; color: #888; }
+
+    /* 单元格列表 */
+    .cell-list-wrap { margin-top: 4px; }
+
+    .cell-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.1s;
+    }
+
+    .cell-item:hover { background: #0f3460; }
+    .cell-item.selected { background: rgba(233,69,96,0.15); border-color: #e94560; }
+
+    .cell-char-box {
+      width: 34px;
+      height: 34px;
+      border: 1px solid #1a4a80;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      background: #0f3460;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .cell-item.selected .cell-char-box { border-color: #e94560; }
+
+    .cell-info { flex: 1; min-width: 0; }
+
+    .cell-name { font-size: 10px; color: #666; font-family: monospace; }
+
+    .cell-props { font-size: 10px; color: #444; }
+
+    .cell-check { color: #e94560; font-size: 13px; width: 16px; text-align: center; }
+
+    /* 批量操作按钮 */
+    .batch-btns {
+      display: flex;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .batch-btn {
+      flex: 1;
+      padding: 5px;
+      border: 1px solid #1a4a80;
+      border-radius: 4px;
+      background: transparent;
+      color: #888;
+      font-size: 11px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .batch-btn:hover { border-color: #e94560; color: #e94560; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1>🔤 网格字体工具 v2</h1>
+  <button class="tb-btn tb-btn-secondary" onclick="location.href='../../index.html'">← 返回工具箱</button>
+  <div class="toolbar-info">
+    网格：<span id="infoGrid">11×11</span> | 字符：<span id="infoChars">0</span>/<span id="infoTotal">121</span> | 选中：<span id="infoSel">0</span> 格
+  </div>
+  <div class="tb-spacer"></div>
+  <button class="tb-btn tb-btn-secondary" onclick="clearSel()">清除选择</button>
+  <button class="tb-btn tb-btn-secondary" onclick="resetAll()">重置全部</button>
+  <button class="tb-btn tb-btn-primary" id="dlBtn" onclick="downloadPNG()" disabled>💾 下载 PNG</button>
+</div>
+
+<div class="main">
+  <!-- 左面板 -->
+  <div class="panel-left">
+    <div class="sec">
+      <div class="sec-title">字体文件</div>
+      <div class="font-drop" id="fontDrop" onclick="document.getElementById('fontFile').click()">
+        <div class="font-drop-icon">📁</div>
+        <div class="font-drop-text">点击或拖拽上传 TTF/OTF</div>
+        <input type="file" id="fontFile" accept=".ttf,.otf,.woff,.woff2">
+        <div class="font-name" id="fontName"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">字符集（每行一个）</div>
+      <textarea class="char-ta" id="charInput"></textarea>
+      <div class="char-hint" id="charHint">0 个字符</div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">网格尺寸</div>
+      <div class="grid-presets" id="gridPresets">
+        <button class="grid-btn" data-g="4">4×4</button>
+        <button class="grid-btn" data-g="5">5×5</button>
+        <button class="grid-btn" data-g="9">9×9</button>
+        <button class="grid-btn active" data-g="11">11×11</button>
+        <button class="grid-btn" data-g="12">12×12</button>
+        <button class="grid-btn" data-g="13">13×13</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">选中格子调整</div>
+      <div class="hint">
+        <strong>单击</strong>选中格子 · <strong>Ctrl+单击</strong>追加选择（并设为锚点）· <strong>Shift+单击</strong>区间选择（锚点到当前格）· <strong>拖拽</strong>框选范围
+      </div>
+
+      <div class="sel-info" id="selInfo">
+        点击格子以选中（可多选后批量调整）
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>字号</span>
+          <div class="slider-row-inner">
+            <input type="number" id="fsNum" value="60" min="5" max="300" onchange="applyFS(this.value)">
+            <span class="val" id="fsVal">60px</span>
+          </div>
+        </div>
+        <input type="range" id="fsSlider" value="60" min="5" max="300" oninput="applyFS(this.value)">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>X 偏移</span>
+          <div class="slider-row-inner">
+            <input type="number" id="oxNum" value="0" min="-200" max="200" onchange="applyOX(this.value)">
+            <span class="val" id="oxVal">0px</span>
+          </div>
+        </div>
+        <input type="range" id="oxSlider" value="0" min="-200" max="200" oninput="applyOX(this.value)">
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Y 偏移</span>
+          <div class="slider-row-inner">
+            <input type="number" id="oyNum" value="0" min="-200" max="200" onchange="applyOY(this.value)">
+            <span class="val" id="oyVal">0px</span>
+          </div>
+        </div>
+        <input type="range" id="oySlider" value="0" min="-200" max="200" oninput="applyOY(this.value)">
+      </div>
+
+      <div class="batch-btns">
+        <button class="batch-btn" onclick="selAll()">全选</button>
+        <button class="batch-btn" onclick="toggleDefaultFont()">切换默认字体</button>
+      </div>
+      <div class="hint" style="margin-top: 8px;">
+        <strong>切换默认字体：</strong>选中格子后点击此按钮，可以让该格子使用系统默认字体而非上传的字体。适用于字体缺失的字符。
+      </div>
+    </div>
+  </div>
+
+  <!-- 画布 -->
+  <div class="canvas-area">
+    <canvas id="gridCanvas"></canvas>
+  </div>
+
+  <!-- 右面板 -->
+  <div class="panel-right">
+    <div class="sec">
+      <div class="sec-title">颜色与线条</div>
+
+      <div class="color-row">
+        <label>文字色</label>
+        <input type="color" id="textColor" value="#000000" oninput="updateColor('text', this.value)">
+        <span class="color-hex" id="textColorHex">#000000</span>
+      </div>
+
+      <div class="color-row">
+        <label>网格线</label>
+        <input type="color" id="lineColor" value="#000000" oninput="updateColor('line', this.value)">
+        <span class="color-hex" id="lineColorHex">#000000</span>
+      </div>
+
+      <div class="color-row">
+        <label>背景色</label>
+        <input type="color" id="bgColor" value="#ffffff" oninput="updateColor('bg', this.value)">
+        <span class="color-hex" id="bgColorHex">#ffffff</span>
+      </div>
+
+      <div class="slider-row" style="margin-top:8px;">
+        <div class="slider-label">
+          <span>线条粗细</span>
+          <span class="val" id="lwVal">1px</span>
+        </div>
+        <input type="range" id="lwSlider" value="1" min="0" max="10" step="0.5" oninput="applyLW(this.value)">
+      </div>
+
+      <div class="color-row" style="margin-top:4px;">
+        <label>选中框</label>
+        <input type="color" id="selColor" value="#e94560" oninput="updateColor('sel', this.value)">
+        <span class="color-hex" id="selColorHex">#e94560</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">格子列表 (<span id="cellListCount">0</span>)</div>
+      <div class="cell-list-wrap" id="cellList" style="max-height:500px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 状态
+// ============================================================
+let gridSize = 11;
+let fontSize = 60;
+let offsetX = 0;
+let offsetY = 0;
+let lineWidth = 1;
+let textColor = '#000000';
+let lineColor = '#000000';
+let bgColor = '#ffffff';
+let selColor = '#e94560';
+let fontLoaded = false;
+let fontFamily = 'sans-serif';
+let fontDisplayName = '';
+
+let selectedCells = new Set();   // 选中的格子索引
+let cellData = [];               // 每个格子的 {fontSize, offsetX, offsetY}
+let chars = [];                  // 字符数组
+
+let anchorCell = null;  // Shift+区间选择的起始锚点
+
+// 框选状态
+let isBoxSelecting = false;
+let boxStart = null;
+let boxCells = new Set();
+
+// 画布
+const CELL_PX = 100; // 每格像素
+const canvas = document.getElementById('gridCanvas');
+const ctx = canvas.getContext('2d');
+
+// ============================================================
+// 工具函数
+// ============================================================
+function getCellCount() { return gridSize * gridSize; }
+
+function cellIndex(row, col) { return row * gridSize + col; }
+function cellRow(idx) { return Math.floor(idx / gridSize); }
+function cellCol(idx) { return idx % gridSize; }
+
+function initCellData() {
+  const n = getCellCount();
+  // 保留现有数据，只扩展不收缩
+  for (let i = cellData.length; i < n; i++) {
+    cellData[i] = { fontSize: fontSize, offsetX: 0, offsetY: 0, useDefaultFont: false };
+  }
+}
+
+function syncSlidersToSelection() {
+  if (selectedCells.size === 0) {
+    // 无选中：用当前全局值
+    setFS(fontSize);
+    setOX(offsetX);
+    setOY(offsetY);
+  } else {
+    // 取第一个选中格的值
+    const first = cellData[[...selectedCells][0]];
+    setFS(first.fontSize);
+    setOX(first.offsetX);
+    setOY(first.offsetY);
+  }
+}
+
+function setFS(v) {
+  fontSize = parseInt(v);
+  document.getElementById('fsSlider').value = fontSize;
+  document.getElementById('fsNum').value = fontSize;
+  document.getElementById('fsVal').textContent = fontSize + 'px';
+}
+
+function setOX(v) {
+  offsetX = parseInt(v);
+  document.getElementById('oxSlider').value = offsetX;
+  document.getElementById('oxNum').value = offsetX;
+  document.getElementById('oxVal').textContent = offsetX + 'px';
+}
+
+function setOY(v) {
+  offsetY = parseInt(v);
+  document.getElementById('oySlider').value = offsetY;
+  document.getElementById('oyNum').value = offsetY;
+  document.getElementById('oyVal').textContent = offsetY + 'px';
+}
+
+function updateInfo() {
+  const total = getCellCount();
+  const filled = Math.min(chars.length, total);
+  document.getElementById('infoGrid').textContent = `${gridSize}×${gridSize}`;
+  document.getElementById('infoChars').textContent = filled;
+  document.getElementById('infoTotal').textContent = total;
+  document.getElementById('infoSel').textContent = selectedCells.size;
+  document.getElementById('dlBtn').disabled = filled === 0;
+
+  if (selectedCells.size === 0) {
+    document.getElementById('selInfo').innerHTML = '点击格子以选中（可多选后批量调整）';
+  } else {
+    const names = [...selectedCells].slice(0, 5).map(i => chars[i] || `格${i+1}`).join('、');
+    const more = selectedCells.size > 5 ? `…+${selectedCells.size-5}` : '';
+    const anchorStr = anchorCell !== null ? ` | 锚点：<span style="color:#4ade80">${chars[anchorCell] || '格' + (anchorCell+1)}</span>` : '';
+    document.getElementById('selInfo').innerHTML = `<span class="sel-count">${selectedCells.size}</span> 格：${names}${more}${anchorStr}`;
+  }
+}
+
+function updateColor(type, val) {
+  if (type === 'text') { textColor = val; document.getElementById('textColorHex').textContent = val; }
+  else if (type === 'line') { lineColor = val; document.getElementById('lineColorHex').textContent = val; }
+  else if (type === 'bg') { bgColor = val; document.getElementById('bgColorHex').textContent = val; }
+  else if (type === 'sel') { selColor = val; document.getElementById('selColorHex').textContent = val; }
+  render();
+}
+
+function applyLW(v) {
+  lineWidth = parseFloat(v);
+  document.getElementById('lwVal').textContent = lineWidth + 'px';
+  render();
+}
+
+function applyFS(v) {
+  fontSize = parseInt(v);
+  document.getElementById('fsSlider').value = fontSize;
+  document.getElementById('fsNum').value = fontSize;
+  document.getElementById('fsVal').textContent = fontSize + 'px';
+  applyToSelected('fontSize', fontSize);
+}
+
+function applyOX(v) {
+  offsetX = parseInt(v);
+  document.getElementById('oxSlider').value = offsetX;
+  document.getElementById('oxNum').value = offsetX;
+  document.getElementById('oxVal').textContent = offsetX + 'px';
+  applyToSelected('offsetX', offsetX);
+}
+
+function applyOY(v) {
+  offsetY = parseInt(v);
+  document.getElementById('oySlider').value = offsetY;
+  document.getElementById('oyNum').value = offsetY;
+  document.getElementById('oyVal').textContent = offsetY + 'px';
+  applyToSelected('offsetY', offsetY);
+}
+
+function applyToSelected(prop, val) {
+  if (selectedCells.size === 0) {
+    // 全局应用：所有格子用新值
+    for (let i = 0; i < cellData.length; i++) {
+      cellData[i][prop] = val;
+    }
+  } else {
+    for (const idx of selectedCells) {
+      cellData[idx][prop] = val;
+    }
+  }
+  render();
+  updateCellList();
+}
+
+// ============================================================
+// 渲染
+// ============================================================
+function render() {
+  const total = getCellCount();
+  const W = gridSize * CELL_PX;
+  const H = gridSize * CELL_PX;
+  canvas.width = W;
+  canvas.height = H;
+
+  // 背景
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  // 网格线
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = lineWidth;
+  for (let i = 0; i <= gridSize; i++) {
+    const p = i * CELL_PX;
+    ctx.beginPath();
+    ctx.moveTo(p, 0); ctx.lineTo(p, H); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, p); ctx.lineTo(W, p); ctx.stroke();
+  }
+
+  // 字符
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+
+  for (let i = 0; i < total; i++) {
+    if (i >= chars.length) break;
+    const cd = cellData[i] || { fontSize: fontSize, offsetX: 0, offsetY: 0, useDefaultFont: false };
+    const row = cellRow(i);
+    const col = cellCol(i);
+    const cx = col * CELL_PX + CELL_PX / 2 + cd.offsetX;
+    const cy = row * CELL_PX + CELL_PX / 2 + cd.offsetY;
+
+    // 根据useDefaultFont决定使用哪个字体
+    const ff = cd.useDefaultFont ? 'sans-serif' : fontFamily;
+    ctx.font = `${cd.fontSize}px "${ff}"`;
+    ctx.fillStyle = textColor;
+    ctx.fillText(chars[i], cx, cy);
+  }
+
+  // 选中格子高亮
+  for (const idx of selectedCells) {
+    const row = cellRow(idx);
+    const col = cellCol(idx);
+    const x = col * CELL_PX;
+    const y = row * CELL_PX;
+
+    ctx.strokeStyle = selColor;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 2, y + 2, CELL_PX - 4, CELL_PX - 4);
+  }
+
+  // 框选预览
+  if (isBoxSelecting && boxStart) {
+    ctx.save();
+    ctx.strokeStyle = selColor;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    const x1 = Math.min(boxStart.x, boxCur.x);
+    const y1 = Math.min(boxStart.y, boxCur.y);
+    const x2 = Math.abs(boxCur.x - boxStart.x);
+    const y2 = Math.abs(boxCur.y - boxStart.y);
+    ctx.strokeRect(x1, y1, x2, y2);
+    ctx.restore();
+  }
+}
+
+// ============================================================
+// 格子选择
+// ============================================================
+function getCellFromEvent(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const col = Math.floor(mx / CELL_PX);
+  const row = Math.floor(my / CELL_PX);
+  if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
+    return { row, col, idx: cellIndex(row, col) };
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  const cell = getCellFromEvent(e);
+  if (!cell) return;
+
+  if (e.shiftKey) {
+    // Shift+点击：区间选择（从锚点到当前格）
+    if (anchorCell !== null) {
+      const r1 = Math.min(cellRow(anchorCell), cell.row);
+      const r2 = Math.max(cellRow(anchorCell), cell.row);
+      const c1 = Math.min(cellCol(anchorCell), cell.col);
+      const c2 = Math.max(cellCol(anchorCell), cell.col);
+      selectedCells.clear();
+      for (let r = r1; r <= r2; r++) {
+        for (let c = c1; c <= c2; c++) {
+          selectedCells.add(cellIndex(r, c));
+        }
+      }
+    } else {
+      // 无锚点时，视为追加选择
+      if (selectedCells.has(cell.idx)) {
+        selectedCells.delete(cell.idx);
+      } else {
+        selectedCells.add(cell.idx);
+      }
+    }
+    syncSlidersToSelection();
+    render();
+    updateCellList();
+  } else if (e.ctrlKey || e.metaKey) {
+    // Ctrl+点击：追加/取消选择，并设为锚点
+    if (selectedCells.has(cell.idx)) {
+      selectedCells.delete(cell.idx);
+    } else {
+      selectedCells.add(cell.idx);
+    }
+    anchorCell = cell.idx;
+    syncSlidersToSelection();
+    render();
+    updateCellList();
+  } else {
+    // 单击：开始框选，同时设为锚点
+    anchorCell = cell.idx;
+    isBoxSelecting = true;
+    boxStart = { x: cell.col * CELL_PX + CELL_PX / 2, y: cell.row * CELL_PX + CELL_PX / 2 };
+    boxCur = { ...boxStart };
+    boxCells.clear();
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!isBoxSelecting) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  boxCur = {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+
+  // 计算框选范围内的格子
+  boxCells.clear();
+  const x1 = Math.min(boxStart.x, boxCur.x);
+  const y1 = Math.min(boxStart.y, boxCur.y);
+  const x2 = Math.max(boxStart.x, boxCur.x);
+  const y2 = Math.max(boxStart.y, boxCur.y);
+  const c1 = Math.floor(x1 / CELL_PX);
+  const r1 = Math.floor(y1 / CELL_PX);
+  const c2 = Math.floor(x2 / CELL_PX);
+  const r2 = Math.floor(y2 / CELL_PX);
+  for (let r = r1; r <= r2; r++) {
+    for (let c = c1; c <= c2; c++) {
+      if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+        boxCells.add(cellIndex(r, c));
+      }
+    }
+  }
+  render();
+
+  // 预览框选
+  ctx.save();
+  ctx.strokeStyle = selColor;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+  ctx.restore();
+});
+
+let boxCur = { x: 0, y: 0 };
+
+canvas.addEventListener('mouseup', (e) => {
+  if (isBoxSelecting) {
+    isBoxSelecting = false;
+    // 有框选范围 → 添加框选结果；没有拖动 → 视为单击选中单个
+    if (boxCells.size > 0) {
+      for (const idx of boxCells) selectedCells.add(idx);
+      anchorCell = [...boxCells][0];
+    } else if (boxStart) {
+      const cell = getCellFromEvent(e);
+      if (cell) {
+        selectedCells.clear();
+        selectedCells.add(cell.idx);
+        anchorCell = cell.idx;
+      }
+    }
+    boxCells.clear();
+    syncSlidersToSelection();
+    render();
+    updateCellList();
+  }
+});
+
+// 触摸支持
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mouseEvent = new MouseEvent('mousedown', {
+    clientX: touch.clientX, clientY: touch.clientY,
+    ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, metaKey: e.metaKey
+  });
+  canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+  canvas.dispatchEvent(mouseEvent);
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  canvas.dispatchEvent(new MouseEvent('mouseup'));
+});
+
+// ============================================================
+// 批量选择
+// ============================================================
+function selAll() {
+  selectedCells.clear();
+  for (let i = 0; i < getCellCount(); i++) selectedCells.add(i);
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+function selRow() {
+  if (selectedCells.size === 0) return;
+  const rows = new Set([...selectedCells].map(cellRow));
+  selectedCells.clear();
+  for (const r of rows) {
+    for (let c = 0; c < gridSize; c++) selectedCells.add(cellIndex(r, c));
+  }
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+function selCol() {
+  if (selectedCells.size === 0) return;
+  const cols = new Set([...selectedCells].map(cellCol));
+  selectedCells.clear();
+  for (const c of cols) {
+    for (let r = 0; r < gridSize; r++) selectedCells.add(cellIndex(r, c));
+  }
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+function selSimilar() {
+  if (selectedCells.size === 0) return;
+  const ref = cellData[[...selectedCells][0]];
+  selectedCells.clear();
+  for (let i = 0; i < cellData.length; i++) {
+    const cd = cellData[i];
+    if (cd.fontSize === ref.fontSize && cd.offsetX === ref.offsetX && cd.offsetY === ref.offsetY) {
+      selectedCells.add(i);
+    }
+  }
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+function clearSel() {
+  selectedCells.clear();
+  anchorCell = null;
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+function toggleDefaultFont() {
+  if (selectedCells.size === 0) {
+    alert('请先选中格子');
+    return;
+  }
+  for (const idx of selectedCells) {
+    if (!cellData[idx]) cellData[idx] = { fontSize: 60, offsetX: 0, offsetY: 0, useDefaultFont: false };
+    cellData[idx].useDefaultFont = !cellData[idx].useDefaultFont;
+  }
+  render();
+  updateCellList();
+}
+
+function resetAll() {
+  if (!confirm('重置所有格子参数（字号/偏移）？')) return;
+  for (let i = 0; i < cellData.length; i++) {
+    cellData[i] = { fontSize: 60, offsetX: 0, offsetY: 0, useDefaultFont: false };
+  }
+  fontSize = 60; offsetX = 0; offsetY = 0;
+  syncSlidersToSelection();
+  render();
+  updateCellList();
+}
+
+// ============================================================
+// 格子列表（右侧面板）
+// ============================================================
+function updateCellList() {
+  const total = getCellCount();
+  const list = document.getElementById('cellList');
+  document.getElementById('cellListCount').textContent = total;
+  list.innerHTML = '';
+
+  for (let i = 0; i < total; i++) {
+    if (i >= chars.length) break;
+    const cd = cellData[i] || { fontSize, offsetX, offsetY, useDefaultFont: false };
+    const char = chars[i];
+    const isSel = selectedCells.has(i);
+
+    const item = document.createElement('div');
+    item.className = 'cell-item' + (isSel ? ' selected' : '');
+    const defaultFlag = cd.useDefaultFont ? ' <span style="color:#4ade80">[默认字体]</span>' : '';
+    item.innerHTML = `
+      <div class="cell-char-box">${char}</div>
+      <div class="cell-info">
+        <div class="cell-name">${i + 1}. ${char.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}</div>
+        <div class="cell-props">${cd.fontSize}px | ${cd.offsetX},${cd.offsetY}${defaultFlag}</div>
+      </div>
+      <div class="cell-check">${isSel ? '✓' : ''}</div>
+    `;
+    item.addEventListener('click', (ev) => {
+      const idx = i;
+      if (ev.shiftKey && anchorCell !== null) {
+        const r1 = Math.min(cellRow(anchorCell), cellRow(idx));
+        const r2 = Math.max(cellRow(anchorCell), cellRow(idx));
+        const c1 = Math.min(cellCol(anchorCell), cellCol(idx));
+        const c2 = Math.max(cellCol(anchorCell), cellCol(idx));
+        selectedCells.clear();
+        for (let r = r1; r <= r2; r++) {
+          for (let c = c1; c <= c2; c++) {
+            selectedCells.add(cellIndex(r, c));
+          }
+        }
+      } else if (ev.ctrlKey || ev.metaKey) {
+        if (selectedCells.has(idx)) selectedCells.delete(idx); else selectedCells.add(idx);
+        anchorCell = idx;
+      } else {
+        selectedCells.clear();
+        selectedCells.add(idx);
+        anchorCell = idx;
+      }
+      syncSlidersToSelection();
+      render();
+      updateCellList();
+    });
+    list.appendChild(item);
+  }
+}
+
+// ============================================================
+// 字符输入
+// ============================================================
+document.getElementById('charInput').addEventListener('input', (e) => {
+  const raw = e.target.value;
+  // 按换行分割，非空
+  chars = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  initCellData();
+  updateInfo();
+  updateCellList();
+  render();
+});
+
+// ============================================================
+// 网格预设
+// ============================================================
+document.querySelectorAll('.grid-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.grid-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    gridSize = parseInt(btn.dataset.g);
+    selectedCells.clear();
+    initCellData();
+    syncSlidersToSelection();
+    updateInfo();
+    updateCellList();
+    render();
+  });
+});
+
+// ============================================================
+// 字体加载
+// ============================================================
+document.getElementById('fontFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  await loadFont(file);
+});
+
+async function loadFont(file) {
+  document.getElementById('fontName').textContent = '加载中...';
+  document.getElementById('fontName').style.display = 'block';
+  try {
+    const buf = await file.arrayBuffer();
+    const name = 'Font_' + Date.now();
+    const face = new FontFace(name, buf);
+    await face.load();
+    document.fonts.add(face);
+    await document.fonts.ready;
+    fontLoaded = true;
+    fontFamily = name;
+    fontDisplayName = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('fontName').textContent = '✓ ' + fontDisplayName;
+    document.getElementById('fontName').style.color = '#4ade80';
+    render();
+  } catch (err) {
+    fontLoaded = false;
+    document.getElementById('fontName').textContent = '✗ 失败: ' + err.message;
+    document.getElementById('fontName').style.color = '#f87171';
+  }
+}
+
+// 拖拽
+const fontDrop = document.getElementById('fontDrop');
+fontDrop.addEventListener('dragover', e => { e.preventDefault(); fontDrop.classList.add('dragover'); });
+fontDrop.addEventListener('dragleave', () => fontDrop.classList.remove('dragover'));
+fontDrop.addEventListener('drop', async e => {
+  e.preventDefault();
+  fontDrop.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    document.getElementById('fontFile').files = e.dataTransfer.files;
+    await loadFont(file);
+  }
+});
+
+// ============================================================
+// 下载
+// ============================================================
+function downloadPNG() {
+  // 临时清除选中框再渲染下载
+  const savedSel = new Set(selectedCells);
+  selectedCells.clear();
+  render();
+  const name = fontDisplayName || 'grid-font';
+  const link = document.createElement('a');
+  link.download = `${name}_${gridSize}x${gridSize}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  // 恢复选中
+  selectedCells = savedSel;
+  render();
+}
+
+// ============================================================
+// 初始化
+// ============================================================
+// 加载 121.txt 作为默认字符集
+(async () => {
+  try {
+    const res = await fetch('../../data/latin121.txt');
+    if (res.ok) {
+      const text = await res.text();
+      chars = text.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      document.getElementById('charInput').value = chars.join('\n');
+    }
+  } catch (_) {
+    // 用默认字符
+    chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.split('');
+    chars = chars.concat(['.', ',', '!', '?', '/', ':', ';', "'", '"']);
+  }
+  initCellData();
+  syncSlidersToSelection();
+  updateInfo();
+  updateCellList();
+  render();
+})();
+</script>
+</body>
+</html>

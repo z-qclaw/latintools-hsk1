@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>文本分行工具 - LatinTools</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f6f7f9;
+      color: #17191c;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+      color: #3f4652;
+      background: #fff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+      line-height: 1.2;
+    }
+
+    .summary {
+      margin: 6px 0 0;
+      color: #687386;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+      padding: 0 14px;
+      border-bottom: 1px solid #e7ebf0;
+      background: #fbfcfd;
+    }
+
+    .panel-title {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .stats {
+      color: #687386;
+      font-size: 13px;
+    }
+
+    .editors {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 560px;
+    }
+
+    .editor-box {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+    }
+
+    .editor-box + .editor-box {
+      border-left: 1px solid #e7ebf0;
+    }
+
+    .editor-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 42px;
+      padding: 0 14px;
+      color: #4a5565;
+      font-size: 13px;
+      font-weight: 650;
+      background: #fff;
+      border-bottom: 1px solid #eef1f5;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100%;
+      min-height: 520px;
+      resize: none;
+      border: 0;
+      outline: none;
+      padding: 14px;
+      color: #17191c;
+      background: #fff;
+      font: 15px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    textarea.output {
+      background: #fbfcfd;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .control-title {
+      font-size: 13px;
+      font-weight: 750;
+      color: #3f4652;
+    }
+
+    .segmented {
+      display: grid;
+      gap: 6px;
+    }
+
+    .option {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 8px;
+      border-radius: 8px;
+      color: #343b46;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .option:hover {
+      background: #f2f5f8;
+    }
+
+    input[type="radio"],
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #176bff;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 88px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      height: 36px;
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+      padding: 0 10px;
+      outline: none;
+      font-size: 14px;
+    }
+
+    input[type="number"]:focus {
+      border-color: #176bff;
+      box-shadow: 0 0 0 3px #e9f1ff;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      height: 38px;
+      border: 1px solid #d9dee7;
+      border-radius: 8px;
+      background: #fff;
+      color: #17191c;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: #176bff;
+      background: #176bff;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    button:hover {
+      filter: brightness(0.98);
+    }
+
+    .toast {
+      min-height: 22px;
+      color: #12805c;
+      font-size: 13px;
+    }
+
+    @media (max-width: 920px) {
+      .workspace,
+      .editors {
+        grid-template-columns: 1fr;
+      }
+
+      .editor-box + .editor-box {
+        border-left: 0;
+        border-top: 1px solid #e7ebf0;
+      }
+
+      textarea {
+        min-height: 320px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topbar">
+      <div>
+        <h1>文本分行工具</h1>
+        <p class="summary">把连续文字整理成逐字竖排、按词分行或固定字数分组，方便做文案预览和排版草稿。</p>
+      </div>
+      <a class="back-link" href="../../index.html">返回工具箱</a>
+    </div>
+
+    <div class="workspace">
+      <section class="panel">
+        <div class="panel-head">
+          <span class="panel-title">文本处理</span>
+          <span class="stats" id="stats">0 字符 / 0 行</span>
+        </div>
+        <div class="editors">
+          <label class="editor-box">
+            <span class="editor-label">输入</span>
+            <textarea id="inputText" placeholder="输入或粘贴文本"></textarea>
+          </label>
+          <label class="editor-box">
+            <span class="editor-label">输出</span>
+            <textarea id="outputText" class="output" readonly placeholder="处理后的文本会显示在这里"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <aside class="controls">
+        <section class="control-group">
+          <div class="control-title">分行方式</div>
+          <div class="segmented">
+            <label class="option">
+              <input type="radio" name="mode" value="char" checked>
+              <span>逐字分行</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="mode" value="word">
+              <span>按词分行</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="mode" value="chunk">
+              <span>固定字数分组</span>
+            </label>
+            <label class="option">
+              <input type="radio" name="mode" value="reverse">
+              <span>逐字倒序分行</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="control-title">分组长度</div>
+          <div class="field-row">
+            <span>每行字符数</span>
+            <input id="chunkSize" type="number" min="1" max="80" value="4">
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="control-title">清理选项</div>
+          <label class="option">
+            <input id="trimSpaces" type="checkbox" checked>
+            <span>去掉空格和空行</span>
+          </label>
+          <label class="option">
+            <input id="keepPunctuation" type="checkbox" checked>
+            <span>保留标点符号</span>
+          </label>
+        </section>
+
+        <section class="control-group">
+          <div class="actions">
+            <button class="primary" id="copyButton">复制结果</button>
+            <button id="clearButton">清空</button>
+          </div>
+          <div class="toast" id="toast" aria-live="polite"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const chunkSize = document.getElementById('chunkSize');
+    const trimSpaces = document.getElementById('trimSpaces');
+    const keepPunctuation = document.getElementById('keepPunctuation');
+    const stats = document.getElementById('stats');
+    const toast = document.getElementById('toast');
+
+    function getMode() {
+      return document.querySelector('input[name="mode"]:checked').value;
+    }
+
+    function cleanText(value) {
+      let text = value.replace(/\r\n/g, '\n');
+      if (trimSpaces.checked) {
+        text = text.replace(/[ \t\u3000]+/g, '').replace(/\n+/g, '');
+      }
+      if (!keepPunctuation.checked) {
+        text = text.replace(/[，。！？、；：“”‘’（）《》【】,.!?;:'"()[\]{}<>/\\|-]/g, '');
+      }
+      return text;
+    }
+
+    function splitGraphemes(value) {
+      if (window.Intl && Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'grapheme' });
+        return Array.from(segmenter.segment(value), item => item.segment);
+      }
+      return Array.from(value);
+    }
+
+    function arrangeText() {
+      const text = cleanText(inputText.value);
+      const mode = getMode();
+      const size = Math.max(1, Math.min(80, Number(chunkSize.value) || 1));
+      let lines = [];
+
+      if (!text) {
+        outputText.value = '';
+        stats.textContent = '0 字符 / 0 行';
+        return;
+      }
+
+      if (mode === 'word') {
+        lines = inputText.value
+          .replace(/\r\n/g, '\n')
+          .split(/[\s,，、;；]+/)
+          .map(item => cleanText(item))
+          .filter(Boolean);
+      } else {
+        const chars = splitGraphemes(text).filter(char => char !== '\n');
+        const source = mode === 'reverse' ? chars.reverse() : chars;
+        if (mode === 'chunk') {
+          for (let i = 0; i < source.length; i += size) {
+            lines.push(source.slice(i, i + size).join(''));
+          }
+        } else {
+          lines = source;
+        }
+      }
+
+      outputText.value = lines.join('\n');
+      stats.textContent = `${splitGraphemes(text).length} 字符 / ${lines.length} 行`;
+    }
+
+    async function copyResult() {
+      const value = outputText.value;
+      if (!value) {
+        showToast('没有可复制的内容');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(value);
+      } catch (_) {
+        outputText.select();
+        document.execCommand('copy');
+      }
+      showToast('已复制');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        toast.textContent = '';
+      }, 1800);
+    }
+
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', arrangeText);
+      input.addEventListener('change', arrangeText);
+    });
+
+    inputText.addEventListener('input', arrangeText);
+    document.getElementById('copyButton').addEventListener('click', copyResult);
+    document.getElementById('clearButton').addEventListener('click', () => {
+      inputText.value = '';
+      arrangeText();
+      inputText.focus();
+    });
+
+    arrangeText();
+  </script>
+</body>
+</html>

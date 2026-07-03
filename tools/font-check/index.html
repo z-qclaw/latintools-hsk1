@@ -1,0 +1,2264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TTF 文本效果检查工具 3.4</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --soft: #eef2f7;
+      --text: #15171a;
+      --muted: #667085;
+      --line: #d9dee7;
+      --accent: #176bff;
+      --accent-soft: #e8f0ff;
+      --danger: #b42318;
+      --ok: #12805c;
+      --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      border-bottom: 1px solid var(--line);
+      background: rgba(246, 247, 249, 0.94);
+      backdrop-filter: blur(12px);
+    }
+
+    .top-inner {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 18px 288px 18px 22px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    .version {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      margin-left: 8px;
+      padding: 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--panel);
+      font-size: 12px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .back-link:hover {
+      color: var(--accent);
+      border-color: rgba(23, 107, 255, 0.45);
+    }
+
+    .summary {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .pill strong {
+      margin-left: 4px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(126px, 150px) minmax(360px, 1fr) 126px minmax(180px, 240px) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .folder-label {
+      display: grid;
+      place-items: center;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+      cursor: pointer;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .folder-label:hover {
+      border-color: rgba(23, 107, 255, 0.55);
+      box-shadow: var(--shadow);
+    }
+
+    .folder-label input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .char-input-wrap {
+      position: relative;
+      min-width: 0;
+      display: grid;
+    }
+
+    .char-input {
+      width: 100%;
+      height: 48px;
+      min-height: 48px;
+      max-height: 124px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 78px 12px 13px;
+      background: var(--panel);
+      color: var(--text);
+      outline: none;
+      line-height: 1.45;
+    }
+
+    .char-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .strip-space-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 9px;
+      background: #fcfdff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .strip-space-button:hover {
+      border-color: rgba(23, 107, 255, 0.42);
+      color: var(--accent);
+    }
+
+    .primary {
+      min-height: 48px;
+      border-radius: var(--radius);
+    }
+
+    .size-control {
+      min-height: 48px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 9px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 12px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .size-control span {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .size-control output {
+      min-width: 42px;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 740;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .size-slider {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .primary {
+      min-width: 104px;
+      padding: 0 18px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 760;
+    }
+
+    .primary:disabled {
+      background: #b8c3d4;
+      cursor: not-allowed;
+    }
+
+    .preset-menu {
+      position: relative;
+      min-width: 0;
+    }
+
+    .preset-menu summary {
+      min-height: 48px;
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 760;
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .preset-menu summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .preset-menu summary::after {
+      content: "⌄";
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .preset-menu[open] summary {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .preset-menu[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .preset-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 12;
+      width: min(420px, calc(100vw - 44px));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    .tool-button {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 10px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .tool-button:hover {
+      border-color: rgba(23, 107, 255, 0.42);
+    }
+
+    .preset-list {
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      margin-bottom: 8px;
+      overflow: auto;
+    }
+
+    .preset-item {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 34px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fcfdff;
+    }
+
+    .preset-use {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+      padding: 8px 10px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .preset-use strong,
+    .preset-use span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .preset-use strong {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .preset-use span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .preset-delete {
+      display: grid;
+      place-items: center;
+      border-left: 1px solid var(--line);
+      background: #fff8f7;
+      color: var(--danger);
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .preset-empty {
+      border: 1px dashed var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .options {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      user-select: none;
+    }
+
+    .metric-source-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      user-select: none;
+    }
+
+    .metric-source-control select {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 0 28px 0 9px;
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .content {
+      max-width: 1480px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 18px 288px 34px 22px;
+    }
+
+    .notice {
+      display: none;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      background: var(--panel);
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .notice.is-visible {
+      display: block;
+    }
+
+    .notice.is-error {
+      border-color: rgba(180, 35, 24, 0.35);
+      background: #fff4f2;
+      color: var(--danger);
+    }
+
+    .empty {
+      min-height: 320px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--muted);
+      text-align: center;
+      padding: 28px;
+    }
+
+    .table-wrap {
+      display: none;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+    }
+
+    .table-wrap.is-visible {
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    th:last-child,
+    td:last-child {
+      border-right: 0;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      min-width: 116px;
+      padding: 10px 8px;
+      background: #f9fafc;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    th.font-head,
+    td.font-cell {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      width: 260px;
+      min-width: 260px;
+      max-width: 260px;
+      text-align: left;
+    }
+
+    th.font-head {
+      z-index: 4;
+    }
+
+    th.pick-head,
+    td.pick-cell {
+      position: sticky;
+      right: 0;
+      z-index: 3;
+      width: 132px;
+      min-width: 132px;
+      max-width: 132px;
+      text-align: center;
+      box-shadow: -1px 0 0 var(--line);
+    }
+
+    th.pick-head {
+      z-index: 4;
+    }
+
+    td.pick-cell {
+      padding: 10px;
+      background: #fcfdff;
+      vertical-align: middle;
+    }
+
+    .font-picker {
+      min-height: 40px;
+      display: inline-grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .font-picker input {
+      inline-size: 16px;
+      block-size: 16px;
+      accent-color: var(--accent);
+    }
+
+    td.font-cell {
+      padding: 10px 12px;
+      background: #fcfdff;
+      vertical-align: middle;
+    }
+
+    .font-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 740;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .font-path {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      line-height: 1.35;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .preview-cell {
+      min-width: 720px;
+      padding: 10px;
+      vertical-align: middle;
+    }
+
+    .preview-box {
+      min-height: 96px;
+      display: flex;
+      align-items: center;
+      border-radius: 6px;
+      padding: 16px 18px;
+      background: #fff;
+      color: #000;
+      line-height: 1.25;
+      letter-spacing: normal;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-kerning: normal;
+      font-feature-settings: "kern" 1;
+    }
+
+    .preview-box.is-honor,
+    .preview-box.is-vivo {
+      display: block;
+      align-items: initial;
+      overflow: visible;
+    }
+
+    .honor-line,
+    .vivo-line {
+      min-height: 1.25em;
+    }
+
+    .vivo-line {
+      min-height: 0;
+      margin: 4px 0;
+      white-space: pre;
+    }
+
+    .vivo-metric-strip {
+      margin: 0 0 8px;
+      padding: 6px 8px;
+      border: 1px solid rgba(23, 107, 255, 0.22);
+      border-radius: 6px;
+      background: rgba(23, 107, 255, 0.06);
+      color: #164ca7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: normal;
+    }
+
+    .vivo-stack-wrap {
+      display: inline-block;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+
+    .vivo-stack-linebox {
+      position: relative;
+      border: 1px solid rgba(180, 35, 24, 0.45);
+      background: rgba(180, 35, 24, 0.07);
+      overflow: hidden;
+    }
+
+    .vivo-stack-linebox + .vivo-stack-linebox {
+      margin-top: 2px;
+    }
+
+    .vivo-stack-inner {
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: inherit;
+      white-space: pre;
+    }
+
+    .vivo-stack-line {
+      display: block;
+      white-space: pre;
+    }
+
+    .vivo-stack-guide {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(180, 35, 24, 0.55);
+      pointer-events: none;
+    }
+
+    .honor-glyph,
+    .vivo-glyph {
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: pre;
+      vertical-align: baseline;
+      cursor: default;
+      background-image: linear-gradient(
+        to right,
+        transparent calc(100% - 1px),
+        rgba(180, 35, 24, 0.58) calc(100% - 1px)
+      );
+    }
+
+    .vivo-glyph {
+      position: relative;
+      vertical-align: middle;
+      background-color: rgba(23, 107, 255, 0.045);
+      outline: 1px solid rgba(23, 107, 255, 0.35);
+      outline-offset: -1px;
+      background-image:
+        linear-gradient(to bottom, rgba(23, 107, 255, 0.42), rgba(23, 107, 255, 0.42)),
+        linear-gradient(to top, rgba(23, 107, 255, 0.42), rgba(23, 107, 255, 0.42));
+      background-size: 100% 1px, 100% 1px;
+      background-position: 0 0, 0 100%;
+      background-repeat: no-repeat;
+    }
+
+    .vivo-glyph-inner {
+      display: inline-block;
+      transform-origin: left top;
+    }
+
+    .honor-glyph.is-clipped,
+    .vivo-glyph.is-clipped {
+      color: var(--danger);
+      background-color: rgba(180, 35, 24, 0.12);
+      outline: 1px solid rgba(180, 35, 24, 0.55);
+      outline-offset: -1px;
+      cursor: zoom-in;
+    }
+
+    .dark-preview .preview-box {
+      background: #111418;
+      color: #fff;
+    }
+
+    .dark-preview .honor-glyph.is-clipped,
+    .dark-preview .vivo-glyph.is-clipped {
+      color: #ffb4aa;
+      background-color: rgba(255, 97, 81, 0.18);
+      outline-color: rgba(255, 180, 170, 0.75);
+    }
+
+    .selection-float {
+      position: fixed;
+      top: 118px;
+      right: 18px;
+      z-index: 8;
+      width: 248px;
+      max-height: calc(100vh - 138px);
+      display: grid;
+      grid-template-rows: auto minmax(86px, 1fr) auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .selection-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .selection-float.is-dragging .selection-head {
+      cursor: grabbing;
+    }
+
+    .selection-title {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .selection-count {
+      min-width: 24px;
+      min-height: 24px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .selection-list {
+      min-height: 86px;
+      margin: 0;
+      padding: 8px 12px;
+      overflow: auto;
+      list-style: none;
+    }
+
+    .selection-list li {
+      padding: 7px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .selection-list li:last-child {
+      border-bottom: 0;
+    }
+
+    .selection-empty {
+      padding: 18px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .selection-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 10px 12px 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .secondary,
+    .danger-button {
+      min-height: 36px;
+      border-radius: 6px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .secondary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .secondary:disabled,
+    .danger-button:disabled {
+      background: #e3e8f0;
+      color: #98a2b3;
+      cursor: not-allowed;
+    }
+
+    .danger-button {
+      border: 1px solid rgba(180, 35, 24, 0.25);
+      background: #fff4f2;
+      color: var(--danger);
+    }
+
+    .dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      background: rgba(15, 23, 42, 0.48);
+    }
+
+    .dialog.is-visible {
+      display: grid;
+    }
+
+    .dialog-panel {
+      width: min(920px, 100%);
+      max-height: min(760px, calc(100vh - 44px));
+      overflow: auto;
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 18px 54px rgba(15, 23, 42, 0.24);
+    }
+
+    .dialog-head {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    .icon-button {
+      inline-size: 34px;
+      block-size: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .dialog-body {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      background: #fcfdff;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .glyph-canvas-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    #glyphCanvas {
+      display: block;
+      width: 100%;
+      min-width: 640px;
+      height: auto;
+    }
+
+    @media (max-width: 1180px) {
+      .top-inner {
+        padding: 18px 22px;
+      }
+
+      .content {
+        padding-right: 22px;
+      }
+
+      .selection-float {
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: auto;
+        max-height: 42vh;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .primary {
+        width: 100%;
+      }
+
+      .size-control {
+        width: 100%;
+      }
+
+      th.font-head,
+      td.font-cell {
+        width: 200px;
+        min-width: 200px;
+        max-width: 200px;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="top-inner">
+        <div class="title-row">
+          <h1>TTF 文本效果检查工具 <span class="version">3.4</span></h1>
+          <div class="summary" aria-label="统计">
+            <a class="back-link" href="../../index.html">返回工具台</a>
+            <span class="pill">TTF <strong id="fontCount">0</strong></span>
+            <span class="pill">已跳过 <strong id="skipCount">0</strong></span>
+            <span class="pill">文本 <strong id="charCount">0</strong></span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <label class="folder-label">
+            <span>选择文件夹</span>
+            <input id="folderInput" type="file" webkitdirectory directory multiple accept=".ttf">
+          </label>
+          <div class="char-input-wrap">
+            <textarea id="charInput" class="char-input" placeholder="输入要检查的文本，例如：Hamburgefonts AV To Ta 0123 éçñ"></textarea>
+            <button id="stripSpacesButton" class="strip-space-button" type="button">去空格</button>
+          </div>
+          <details id="presetMenu" class="preset-menu">
+            <summary>预设文本</summary>
+            <div class="preset-popover">
+              <div id="presetList" class="preset-list"></div>
+              <button id="addPresetButton" class="tool-button" type="button">新增当前文本</button>
+            </div>
+          </details>
+          <label class="size-control">
+            <span>字号</span>
+            <input id="sizeInput" class="size-slider" type="range" min="24" max="180" step="1" value="56" aria-label="预览字号">
+            <output id="sizeValue">56px</output>
+          </label>
+          <button id="renderButton" class="primary" disabled>确认</button>
+        </div>
+
+        <div class="options">
+          <label class="check"><input id="darkInput" type="checkbox"> 深色底预览</label>
+          <label class="check"><input id="honorInput" type="checkbox"> 荣耀模式</label>
+          <label class="check"><input id="vivoInput" type="checkbox"> vivo 模式</label>
+          <label class="check"><input id="vivoStackInput" type="checkbox"> 逐行容器推导</label>
+          <label class="metric-source-control">
+            <span>vivo 高度来源</span>
+            <select id="vivoMetricSourceInput">
+              <option value="auto">Auto：USE_TYPO_METRICS</option>
+              <option value="typo">OS/2 Typo：sTypoAsc/Desc</option>
+              <option value="typo-gap">OS/2 Typo + lineGap</option>
+              <option value="hhea">hhea：ascent/descent</option>
+              <option value="hhea-gap">hhea + lineGap</option>
+              <option value="win">OS/2 Win：usWinAsc/Desc</option>
+              <option value="head">head bbox：yMin/yMax</option>
+            </select>
+          </label>
+          <label class="metric-source-control">
+            <span>容器基准</span>
+            <select id="vivoContainerBasisInput">
+              <option value="xheight">每行 × xHeight</option>
+              <option value="cap">每行 × CapHeight</option>
+              <option value="upm">每行 × UPM</option>
+            </select>
+          </label>
+          <span>按输入内容原样展示，保留空格、换行和字体自身字间距；会自动跳过任意层级中名为“归档”的子文件夹。</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div id="notice" class="notice"></div>
+      <div id="empty" class="empty">
+        <div>
+          <strong>先选择包含 TTF 的文件夹，再输入文本确认。</strong><br>
+          推荐使用 Chrome 或 Edge 打开这个 HTML 文件。
+        </div>
+      </div>
+      <div id="tableWrap" class="table-wrap">
+        <table id="resultTable"></table>
+      </div>
+    </main>
+  </div>
+
+  <aside class="selection-float" aria-label="已勾选字体">
+    <div class="selection-head">
+      <h2 class="selection-title">已勾选字体</h2>
+      <span id="selectionCount" class="selection-count">0</span>
+    </div>
+    <ul id="selectionList" class="selection-list"></ul>
+    <div class="selection-actions">
+      <button id="copySelectionButton" class="secondary" type="button" disabled>复制</button>
+      <button id="clearSelectionButton" class="danger-button" type="button" disabled>清空</button>
+    </div>
+  </aside>
+
+  <div id="glyphDialog" class="dialog" aria-hidden="true">
+    <section class="dialog-panel" role="dialog" aria-modal="true" aria-labelledby="glyphDialogTitle">
+      <div class="dialog-head">
+        <h2 id="glyphDialogTitle" class="dialog-title">字符裁切详情</h2>
+        <button id="glyphDialogClose" class="icon-button" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="dialog-body">
+        <div id="glyphMetrics" class="metric-grid"></div>
+        <div class="glyph-canvas-wrap">
+          <canvas id="glyphCanvas" width="900" height="430"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const folderInput = document.getElementById("folderInput");
+    const charInput = document.getElementById("charInput");
+    const sizeInput = document.getElementById("sizeInput");
+    const sizeValue = document.getElementById("sizeValue");
+    const renderButton = document.getElementById("renderButton");
+    const darkInput = document.getElementById("darkInput");
+    const honorInput = document.getElementById("honorInput");
+    const vivoInput = document.getElementById("vivoInput");
+    const vivoStackInput = document.getElementById("vivoStackInput");
+    const vivoMetricSourceInput = document.getElementById("vivoMetricSourceInput");
+    const vivoContainerBasisInput = document.getElementById("vivoContainerBasisInput");
+    const fontCount = document.getElementById("fontCount");
+    const skipCount = document.getElementById("skipCount");
+    const charCount = document.getElementById("charCount");
+    const notice = document.getElementById("notice");
+    const empty = document.getElementById("empty");
+    const tableWrap = document.getElementById("tableWrap");
+    const resultTable = document.getElementById("resultTable");
+    const selectionCount = document.getElementById("selectionCount");
+    const selectionList = document.getElementById("selectionList");
+    const copySelectionButton = document.getElementById("copySelectionButton");
+    const clearSelectionButton = document.getElementById("clearSelectionButton");
+    const stripSpacesButton = document.getElementById("stripSpacesButton");
+    const addPresetButton = document.getElementById("addPresetButton");
+    const presetMenu = document.getElementById("presetMenu");
+    const presetList = document.getElementById("presetList");
+    const selectionFloat = document.querySelector(".selection-float");
+    const selectionHead = document.querySelector(".selection-head");
+    const glyphDialog = document.getElementById("glyphDialog");
+    const glyphDialogClose = document.getElementById("glyphDialogClose");
+    const glyphDialogTitle = document.getElementById("glyphDialogTitle");
+    const glyphMetrics = document.getElementById("glyphMetrics");
+    const glyphCanvas = document.getElementById("glyphCanvas");
+
+    let fonts = [];
+    let skippedFiles = 0;
+    let loadedUrls = [];
+    let renderDebounce = 0;
+    const selectedFonts = new Map();
+    const PRESET_STORAGE_KEY = "font-check-presets-v1";
+    const SELECTION_FLOAT_POSITION_KEY = "font-check-selection-float-position-v1";
+    const METRIC_CLIP_THRESHOLD = 0.25;
+    const METRIC_SOURCE_LABELS = {
+      auto: "Auto",
+      typo: "OS/2 Typo",
+      "typo-gap": "OS/2 Typo + lineGap",
+      hhea: "hhea",
+      "hhea-gap": "hhea + lineGap",
+      win: "OS/2 Win",
+      head: "head bbox"
+    };
+    const DEFAULT_PRESETS = [
+      ":;…·•#/\\‥-‐–—―_‹›«»@&§°|‖¢¤$£¥€×÷≠±≈※ƒ¶©®™%‰℃℉¼½¾",
+      "ĭįíîïìīĩịỉĵǰ",
+      "0123456789°"
+    ];
+    let presets = loadPresets();
+
+    function showNotice(message, isError = false) {
+      notice.textContent = message;
+      notice.classList.toggle("is-error", isError);
+      notice.classList.toggle("is-visible", Boolean(message));
+    }
+
+    function stripTextSpaces(value) {
+      return String(value).replace(/[ \t\f\v\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]+/g, "");
+    }
+
+    function loadPresets() {
+      const saved = localStorage.getItem(PRESET_STORAGE_KEY);
+      if (!saved) return DEFAULT_PRESETS.map(stripTextSpaces);
+
+      try {
+        const parsed = JSON.parse(saved);
+        if (!Array.isArray(parsed)) return DEFAULT_PRESETS.map(stripTextSpaces);
+        return parsed.map(item => stripTextSpaces(item)).filter(Boolean);
+      } catch (error) {
+        return DEFAULT_PRESETS.map(stripTextSpaces);
+      }
+    }
+
+    function savePresets() {
+      localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+    }
+
+    function renderPresets() {
+      presetList.innerHTML = presets.length
+        ? presets.map((text, index) => `
+          <div class="preset-item">
+            <button class="preset-use" type="button" data-index="${index}" title="${escapeHtml(text)}">
+              <strong>预设 ${index + 1}</strong>
+              <span>${escapeHtml(text)}</span>
+            </button>
+            <button class="preset-delete" type="button" data-index="${index}" aria-label="删除预设 ${index + 1}">×</button>
+          </div>
+        `).join("")
+        : "<div class=\"preset-empty\">暂无预设文本</div>";
+    }
+
+    function setPreviewText(value) {
+      charInput.value = value;
+      updateControls();
+    }
+
+    function addCurrentTextAsPreset() {
+      const text = stripTextSpaces(charInput.value).trim();
+      if (!text) {
+        showNotice("当前文本为空，无法新增预设。", true);
+        return;
+      }
+      if (presets.includes(text)) {
+        showNotice("这个预设已经存在。");
+        setPreviewText(text);
+        return;
+      }
+      presets.push(text);
+      savePresets();
+      renderPresets();
+      setPreviewText(text);
+      showNotice(`已新增预设 ${presets.length}。`);
+    }
+
+    function deletePreset(index) {
+      if (!presets[index]) return;
+      presets.splice(index, 1);
+      savePresets();
+      renderPresets();
+      showNotice("已删除预设文本。");
+    }
+
+    function removeSpacesFromCurrentText() {
+      const stripped = stripTextSpaces(charInput.value);
+      setPreviewText(stripped);
+      showNotice("已去除当前文本中的空格。");
+    }
+
+    function scheduleRender() {
+      clearTimeout(renderDebounce);
+      renderDebounce = setTimeout(renderResults, 180);
+    }
+
+    function resetRenderedFonts() {
+      loadedUrls.forEach(url => URL.revokeObjectURL(url));
+      loadedUrls = [];
+      document.fonts.forEach(fontFace => {
+        if (fontFace.family.startsWith("LocalCheckFont_")) {
+          document.fonts.delete(fontFace);
+        }
+      });
+    }
+
+    function isInArchiveFolder(file) {
+      const path = file.webkitRelativePath || file.name;
+      return path.split("/").slice(0, -1).includes("归档");
+    }
+
+    function fileBaseName(file) {
+      return file.name.replace(/\.ttf$/i, "");
+    }
+
+    function updateControls() {
+      fontCount.textContent = String(fonts.length);
+      skipCount.textContent = String(skippedFiles);
+      sizeValue.textContent = `${getPreviewSize()}px`;
+      const hasPreviewText = getPreviewText().length > 0;
+      renderButton.disabled = fonts.length === 0 || !hasPreviewText;
+    }
+
+    function getPreviewText() {
+      const text = charInput.value;
+      charCount.textContent = String(Array.from(text).length);
+      return text;
+    }
+
+    function getPreviewSize() {
+      return Number(sizeInput.value);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function fontSelectionKey(file) {
+      return file.webkitRelativePath || file.name;
+    }
+
+    function updateSelectionPanel() {
+      const selectedNames = Array.from(selectedFonts.values());
+      const hasSelection = selectedNames.length > 0;
+      selectionCount.textContent = String(selectedNames.length);
+      copySelectionButton.disabled = !hasSelection;
+      clearSelectionButton.disabled = !hasSelection;
+      selectionList.innerHTML = hasSelection
+        ? selectedNames.map(name => `<li>${escapeHtml(name)}</li>`).join("")
+        : "<li class=\"selection-empty\">还没有勾选字体</li>";
+    }
+
+    function clampSelectionFloatPosition(x, y) {
+      const rect = selectionFloat.getBoundingClientRect();
+      const margin = 12;
+      return {
+        x: Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - rect.width - margin)),
+        y: Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - rect.height - margin))
+      };
+    }
+
+    function applySelectionFloatPosition(position) {
+      if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+      const clamped = clampSelectionFloatPosition(position.x, position.y);
+      selectionFloat.style.left = `${clamped.x}px`;
+      selectionFloat.style.top = `${clamped.y}px`;
+      selectionFloat.style.right = "auto";
+      selectionFloat.style.bottom = "auto";
+    }
+
+    function saveSelectionFloatPosition() {
+      const rect = selectionFloat.getBoundingClientRect();
+      localStorage.setItem(SELECTION_FLOAT_POSITION_KEY, JSON.stringify({
+        x: Math.round(rect.left),
+        y: Math.round(rect.top)
+      }));
+    }
+
+    function restoreSelectionFloatPosition() {
+      try {
+        applySelectionFloatPosition(JSON.parse(localStorage.getItem(SELECTION_FLOAT_POSITION_KEY) || "null"));
+      } catch (error) {
+        localStorage.removeItem(SELECTION_FLOAT_POSITION_KEY);
+      }
+    }
+
+    function makeSelectionFloatDraggable() {
+      let dragState = null;
+
+      function startDrag(clientX, clientY) {
+        const rect = selectionFloat.getBoundingClientRect();
+        dragState = {
+          offsetX: clientX - rect.left,
+          offsetY: clientY - rect.top
+        };
+        selectionFloat.classList.add("is-dragging");
+      }
+
+      function moveDrag(clientX, clientY) {
+        if (!dragState) return;
+        applySelectionFloatPosition({
+          x: clientX - dragState.offsetX,
+          y: clientY - dragState.offsetY
+        });
+      }
+
+      function stopDragging() {
+        if (!dragState) return;
+        selectionFloat.classList.remove("is-dragging");
+        dragState = null;
+        saveSelectionFloatPosition();
+      }
+
+      selectionHead.addEventListener("mousedown", event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        startDrag(event.clientX, event.clientY);
+      });
+      document.addEventListener("mousemove", event => {
+        moveDrag(event.clientX, event.clientY);
+      });
+      document.addEventListener("mouseup", stopDragging);
+      selectionHead.addEventListener("touchstart", event => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        startDrag(touch.clientX, touch.clientY);
+      }, { passive: true });
+      document.addEventListener("touchmove", event => {
+        if (!dragState || event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        moveDrag(touch.clientX, touch.clientY);
+      }, { passive: true });
+      document.addEventListener("touchend", stopDragging);
+      document.addEventListener("touchcancel", stopDragging);
+      window.addEventListener("resize", () => {
+        const rect = selectionFloat.getBoundingClientRect();
+        applySelectionFloatPosition({ x: rect.left, y: rect.top });
+        saveSelectionFloatPosition();
+      });
+    }
+
+    async function copySelectedFonts() {
+      const text = Array.from(selectedFonts.values()).join("\n");
+      if (!text) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        showNotice(`已复制 ${selectedFonts.size} 个字体名称。`);
+      } catch (error) {
+        const fallback = document.createElement("textarea");
+        fallback.value = text;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        document.body.appendChild(fallback);
+        fallback.select();
+        document.execCommand("copy");
+        document.body.removeChild(fallback);
+        showNotice(`已复制 ${selectedFonts.size} 个字体名称。`);
+      }
+    }
+
+    function clearSelectedFonts() {
+      selectedFonts.clear();
+      resultTable.querySelectorAll(".font-select").forEach(input => {
+        input.checked = false;
+      });
+      updateSelectionPanel();
+      showNotice("已清空勾选的字体。");
+    }
+
+    function splitGraphemes(text) {
+      if ("Segmenter" in Intl) {
+        const segmenter = new Intl.Segmenter("zh-CN", { granularity: "grapheme" });
+        return Array.from(segmenter.segment(text), item => item.segment);
+      }
+      return Array.from(text);
+    }
+
+    function canvasFont(size, family) {
+      return `${size}px "${family}", sans-serif`;
+    }
+
+    function measureGlyph(ctx, glyph) {
+      const metrics = ctx.measureText(glyph);
+      const advance = Math.max(0, metrics.width || 0);
+      const left = Number(metrics.actualBoundingBoxLeft || 0);
+      const right = Number(metrics.actualBoundingBoxRight || advance);
+      const ascent = Number(metrics.actualBoundingBoxAscent || 0);
+      const descent = Number(metrics.actualBoundingBoxDescent || 0);
+      const leftOverflow = Math.max(0, left);
+      const rightOverflow = Math.max(0, right - advance);
+      return {
+        advance,
+        left,
+        right,
+        ascent,
+        descent,
+        leftOverflow,
+        rightOverflow,
+        clipped: leftOverflow > 0 || rightOverflow > 0
+      };
+    }
+
+    function readTag(view, offset) {
+      return String.fromCharCode(
+        view.getUint8(offset),
+        view.getUint8(offset + 1),
+        view.getUint8(offset + 2),
+        view.getUint8(offset + 3)
+      );
+    }
+
+    function tableView(fontView, table) {
+      if (!table || table.offset < 0 || table.offset + table.length > fontView.byteLength) return null;
+      return new DataView(fontView.buffer, fontView.byteOffset + table.offset, table.length);
+    }
+
+    async function parseTtfMetrics(file) {
+      const buffer = await file.arrayBuffer();
+      const view = new DataView(buffer);
+      if (view.byteLength < 12) throw new Error("字体表目录不完整");
+
+      const numTables = view.getUint16(4);
+      const tables = {};
+      for (let i = 0; i < numTables; i++) {
+        const offset = 12 + i * 16;
+        if (offset + 16 > view.byteLength) break;
+        const tag = readTag(view, offset);
+        tables[tag] = {
+          offset: view.getUint32(offset + 8),
+          length: view.getUint32(offset + 12)
+        };
+      }
+
+      const head = tableView(view, tables.head);
+      const hhea = tableView(view, tables.hhea);
+      const os2 = tableView(view, tables["OS/2"]);
+      if (!head || !hhea || !os2) throw new Error("缺少 head/hhea/OS/2 表");
+
+      const unitsPerEm = head.getUint16(18);
+      const fsSelection = os2.byteLength >= 64 ? os2.getUint16(62) : 0;
+      const useTypoMetrics = Boolean(fsSelection & (1 << 7));
+      const os2Version = os2.getUint16(0);
+      const sTypoAscender = os2.byteLength >= 70 ? os2.getInt16(68) : null;
+      const sTypoDescender = os2.byteLength >= 72 ? os2.getInt16(70) : null;
+      const sTypoLineGap = os2.byteLength >= 74 ? os2.getInt16(72) : null;
+      const usWinAscent = os2.byteLength >= 76 ? os2.getUint16(74) : null;
+      const usWinDescent = os2.byteLength >= 78 ? os2.getUint16(76) : null;
+      const sxHeight = os2.byteLength >= 88 ? os2.getInt16(86) : null;
+      const sCapHeight = os2.byteLength >= 90 ? os2.getInt16(88) : null;
+
+      return {
+        unitsPerEm,
+        head: {
+          yMin: head.getInt16(38),
+          yMax: head.getInt16(42)
+        },
+        hhea: {
+          ascent: hhea.getInt16(4),
+          descent: hhea.getInt16(6),
+          lineGap: hhea.getInt16(8)
+        },
+        os2: {
+          version: os2Version,
+          fsSelection,
+          useTypoMetrics,
+          sTypoAscender,
+          sTypoDescender,
+          sTypoLineGap,
+          usWinAscent,
+          usWinDescent,
+          sxHeight,
+          sCapHeight
+        }
+      };
+    }
+
+    function getVivoMetricSourceMode() {
+      return vivoMetricSourceInput.value || "auto";
+    }
+
+    function getVivoContainerBasisMode() {
+      return vivoContainerBasisInput.value || "upm";
+    }
+
+    function applyLineGap(metrics) {
+      const gap = metrics.lineGap || 0;
+      const topExtra = Math.ceil(gap / 2);
+      const bottomExtra = gap - topExtra;
+      return {
+        ...metrics,
+        source: `${metrics.source} + lineGap`,
+        ascent: metrics.ascent + topExtra,
+        descent: metrics.descent - bottomExtra
+      };
+    }
+
+    function selectVerticalMetrics(fontMetrics, sourceMode = "auto") {
+      if (!fontMetrics) return null;
+      const { os2, hhea } = fontMetrics;
+      const hasTypoMetrics = Number.isFinite(os2.sTypoAscender) && Number.isFinite(os2.sTypoDescender);
+      const hasWinMetrics = Number.isFinite(os2.usWinAscent) && Number.isFinite(os2.usWinDescent);
+
+      if ((sourceMode === "typo" || sourceMode === "typo-gap") && hasTypoMetrics) {
+        const metrics = {
+          source: "OS/2 typo",
+          sourceKey: "typo",
+          ascent: os2.sTypoAscender,
+          descent: os2.sTypoDescender,
+          lineGap: os2.sTypoLineGap || 0
+        };
+        return sourceMode === "typo-gap" ? applyLineGap(metrics) : metrics;
+      }
+      if (sourceMode === "hhea" || sourceMode === "hhea-gap") {
+        const metrics = {
+          source: "hhea",
+          sourceKey: "hhea",
+          ascent: hhea.ascent,
+          descent: hhea.descent,
+          lineGap: hhea.lineGap || 0
+        };
+        return sourceMode === "hhea-gap" ? applyLineGap(metrics) : metrics;
+      }
+      if (sourceMode === "win" && hasWinMetrics) {
+        return {
+          source: "OS/2 win",
+          sourceKey: "win",
+          ascent: os2.usWinAscent,
+          descent: -os2.usWinDescent,
+          lineGap: 0
+        };
+      }
+      if (sourceMode === "head") {
+        return {
+          source: "head bbox",
+          sourceKey: "head",
+          ascent: fontMetrics.head.yMax,
+          descent: fontMetrics.head.yMin,
+          lineGap: 0
+        };
+      }
+      if (os2.useTypoMetrics && hasTypoMetrics) {
+        return {
+          source: "Auto -> OS/2 typo",
+          sourceKey: "auto",
+          ascent: os2.sTypoAscender,
+          descent: os2.sTypoDescender,
+          lineGap: os2.sTypoLineGap || 0
+        };
+      }
+      return {
+        source: "Auto -> hhea",
+        sourceKey: "auto",
+        ascent: hhea.ascent,
+        descent: hhea.descent,
+        lineGap: hhea.lineGap || 0
+      };
+    }
+
+    function formatFontMetricSummary(fontMetrics, sourceMode = "auto") {
+      if (!fontMetrics) return "TTF metrics 读取失败";
+      const active = selectVerticalMetrics(fontMetrics, sourceMode);
+      return [
+        `UPM ${fontMetrics.unitsPerEm}`,
+        `使用 ${active.source}`,
+        `ascent ${active.ascent}`,
+        `descent ${active.descent}`,
+        `lineGap ${active.lineGap}`,
+        `win ${fontMetrics.os2.usWinAscent}/${fontMetrics.os2.usWinDescent}`,
+        `head y ${fontMetrics.head.yMin}/${fontMetrics.head.yMax}`
+      ].join(" / ");
+    }
+
+    function formatActiveMetricDetails(fontMetrics, sourceMode, size) {
+      if (!fontMetrics) return "TTF metrics 读取失败";
+      const active = selectVerticalMetrics(fontMetrics, sourceMode);
+      const scale = size / fontMetrics.unitsPerEm;
+      const topPx = -active.ascent * scale;
+      const bottomPx = -active.descent * scale;
+      const heightPx = bottomPx - topPx;
+      return [
+        `当前: ${active.source}`,
+        `UPM ${fontMetrics.unitsPerEm}`,
+        `ascent ${active.ascent} (${(-topPx).toFixed(2)}px)`,
+        `descent ${active.descent} (${bottomPx.toFixed(2)}px)`,
+        `lineGap ${active.lineGap}`,
+        `裁切盒 ${heightPx.toFixed(2)}px`,
+        `top ${topPx.toFixed(2)}px`,
+        `bottom ${bottomPx.toFixed(2)}px`
+      ].join(" / ");
+    }
+
+    function containerBasisValue(fontMetrics, basisMode) {
+      if (!fontMetrics) return 0;
+      if (basisMode === "cap" && Number.isFinite(fontMetrics.os2.sCapHeight) && fontMetrics.os2.sCapHeight > 0) {
+        return fontMetrics.os2.sCapHeight;
+      }
+      if (basisMode === "xheight" && Number.isFinite(fontMetrics.os2.sxHeight) && fontMetrics.os2.sxHeight > 0) {
+        return fontMetrics.os2.sxHeight;
+      }
+      return fontMetrics.unitsPerEm;
+    }
+
+    function containerBasisLabel(basisMode) {
+      if (basisMode === "cap") return "CapHeight";
+      if (basisMode === "xheight") return "xHeight";
+      return "UPM";
+    }
+
+    function measureVivoGlyph(ctx, glyph, size, fontMetrics, sourceMode = "auto") {
+      const measurement = measureGlyph(ctx, glyph);
+      const active = selectVerticalMetrics(fontMetrics, sourceMode);
+      if (!active || !fontMetrics.unitsPerEm) {
+        return {
+          ...measurement,
+          clipHeight: measurement.ascent + measurement.descent,
+          baselineOffset: measurement.ascent,
+          clipTop: -measurement.ascent,
+          clipBottom: measurement.descent,
+          topOverflow: 0,
+          bottomOverflow: 0,
+          metricSource: "Canvas actual bbox",
+          clipped: measurement.clipped
+        };
+      }
+
+      const scale = size / fontMetrics.unitsPerEm;
+      const lineGap = active.lineGap * scale;
+      const clipTop = -active.ascent * scale;
+      const clipBottom = -active.descent * scale;
+      const clipHeight = clipBottom - clipTop;
+      const baselineOffset = -clipTop;
+      const actualTop = -measurement.ascent;
+      const actualBottom = measurement.descent;
+      const topOverflow = Math.max(0, clipTop - actualTop);
+      const bottomOverflow = Math.max(0, actualBottom - clipBottom);
+      return {
+        ...measurement,
+        clipHeight,
+        baselineOffset,
+        clipTop,
+        clipBottom,
+        lineGap,
+        topOverflow,
+        bottomOverflow,
+        metricSource: active.source,
+        clipped:
+          measurement.leftOverflow > METRIC_CLIP_THRESHOLD ||
+          measurement.rightOverflow > METRIC_CLIP_THRESHOLD ||
+          topOverflow > METRIC_CLIP_THRESHOLD ||
+          bottomOverflow > METRIC_CLIP_THRESHOLD
+      };
+    }
+
+    function formatCodepoints(value) {
+      return Array.from(value)
+        .map(char => `U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}`)
+        .join(" ");
+    }
+
+    function metricDataAttrs(data) {
+      return [
+        `data-char="${escapeHtml(data.char)}"`,
+        `data-family="${escapeHtml(data.family)}"`,
+        `data-size="${data.size}"`,
+        `data-advance="${data.advance.toFixed(3)}"`,
+        `data-left="${data.left.toFixed(3)}"`,
+        `data-right="${data.right.toFixed(3)}"`,
+        `data-ascent="${data.ascent.toFixed(3)}"`,
+        `data-descent="${data.descent.toFixed(3)}"`,
+        `data-left-overflow="${data.leftOverflow.toFixed(3)}"`,
+        `data-right-overflow="${data.rightOverflow.toFixed(3)}"`,
+        `data-top-overflow="${Number(data.topOverflow || 0).toFixed(3)}"`,
+        `data-bottom-overflow="${Number(data.bottomOverflow || 0).toFixed(3)}"`,
+        `data-clip-top="${Number(data.clipTop || -data.ascent || 0).toFixed(3)}"`,
+        `data-clip-bottom="${Number(data.clipBottom || data.descent || 0).toFixed(3)}"`,
+        `data-metric-source="${escapeHtml(data.metricSource || "")}"`,
+        `data-codepoints="${escapeHtml(formatCodepoints(data.char))}"`
+      ].join(" ");
+    }
+
+    function honorGlyphHtml(ctx, glyph, family, size) {
+      if (glyph === "\n") return "</div><div class=\"honor-line\">";
+      if (glyph === "\r") return "";
+
+      const visibleGlyph = glyph === "\t" ? "    " : glyph;
+      const measurement = measureGlyph(ctx, visibleGlyph);
+      const width = measurement.advance;
+      const displayGlyph = visibleGlyph === " " ? "&nbsp;" : escapeHtml(visibleGlyph);
+      const clippedClass = measurement.clipped ? " is-clipped" : "";
+      const clipText = measurement.clipped
+        ? ` / 左 ${measurement.leftOverflow.toFixed(2)}px / 右 ${measurement.rightOverflow.toFixed(2)}px`
+        : "";
+      const title = `${visibleGlyph} / advance ${width.toFixed(2)}px${clipText}`;
+      const attrs = metricDataAttrs({
+        char: visibleGlyph,
+        family,
+        size,
+        ...measurement
+      });
+      return `<span class="honor-glyph${clippedClass}" title="${escapeHtml(title)}" style="width:${width.toFixed(3)}px;" ${attrs}>${displayGlyph}</span>`;
+    }
+
+    function renderHonorText(text, family, size) {
+      const canvas = renderHonorText.canvas || (renderHonorText.canvas = document.createElement("canvas"));
+      const ctx = canvas.getContext("2d");
+      ctx.font = canvasFont(size, family);
+      return `<div class="honor-line">${splitGraphemes(text).map(glyph => honorGlyphHtml(ctx, glyph, family, size)).join("")}</div>`;
+    }
+
+    function vivoGlyphHtml(ctx, glyph, family, size, fontMetrics, sourceMode) {
+      if (glyph === "\n") return "</div><div class=\"vivo-line\">";
+      if (glyph === "\r") return "";
+
+      const visibleGlyph = glyph === "\t" ? "    " : glyph;
+      const measurement = measureVivoGlyph(ctx, visibleGlyph, size, fontMetrics, sourceMode);
+      const width = measurement.advance;
+      const displayGlyph = visibleGlyph === " " ? "&nbsp;" : escapeHtml(visibleGlyph);
+      const clippedClass = measurement.clipped ? " is-clipped" : "";
+      const clipText = measurement.clipped
+        ? ` / 上 ${measurement.topOverflow.toFixed(2)}px / 下 ${measurement.bottomOverflow.toFixed(2)}px / 左 ${measurement.leftOverflow.toFixed(2)}px / 右 ${measurement.rightOverflow.toFixed(2)}px`
+        : "";
+      const title = `${visibleGlyph} / ${measurement.metricSource} 裁切盒 ${measurement.clipHeight.toFixed(2)}px / ${formatFontMetricSummary(fontMetrics, sourceMode)}${clipText}`;
+      const attrs = metricDataAttrs({
+        char: visibleGlyph,
+        family,
+        size,
+        ...measurement
+      });
+      const textShift = measurement.baselineOffset - measurement.ascent;
+      const appliedTextShift = Number.isFinite(measurement.textShift) ? measurement.textShift : textShift;
+      return `<span class="vivo-glyph${clippedClass}" title="${escapeHtml(title)}" style="width:${width.toFixed(3)}px;height:${measurement.clipHeight.toFixed(3)}px;" ${attrs}><span class="vivo-glyph-inner" style="font-family:'${escapeHtml(family)}',sans-serif;font-size:${size}px;line-height:${size}px;transform:translateY(${appliedTextShift.toFixed(3)}px);">${displayGlyph}</span></span>`;
+    }
+
+    function renderVivoText(text, family, size, fontMetrics, sourceMode) {
+      const canvas = renderVivoText.canvas || (renderVivoText.canvas = document.createElement("canvas"));
+      const ctx = canvas.getContext("2d");
+      ctx.font = canvasFont(size, family);
+      const details = formatActiveMetricDetails(fontMetrics, sourceMode, size);
+      return `<div class="vivo-metric-strip">${escapeHtml(details)}</div><div class="vivo-line" title="${escapeHtml(formatFontMetricSummary(fontMetrics, sourceMode))}">${splitGraphemes(text).map(glyph => vivoGlyphHtml(ctx, glyph, family, size, fontMetrics, sourceMode)).join("")}</div>`;
+    }
+
+    function renderVivoStackText(text, family, size, fontMetrics, sourceMode, basisMode) {
+      if (!fontMetrics) return `<div class="vivo-metric-strip">TTF metrics 读取失败</div>${escapeHtml(text)}`;
+      const active = selectVerticalMetrics(fontMetrics, sourceMode);
+      const scale = size / fontMetrics.unitsPerEm;
+      const lines = text.replace(/\r/g, "").split("\n");
+      const lineCount = Math.max(1, lines.length);
+      const ascentPx = active.ascent * scale;
+      const descentPx = -active.descent * scale;
+      const lineGapPx = active.lineGap * scale;
+      const lineHeightPx = ascentPx + descentPx + lineGapPx;
+      const basisValue = containerBasisValue(fontMetrics, basisMode);
+      const containerLinePx = basisValue * scale;
+      const layoutTopPx = (containerLinePx - lineHeightPx) / 2;
+      const widthPx = Math.max(size * 2.8, Math.max(...lines.map(line => line.length || 1)) * size * 0.82);
+      const canvas = renderVivoStackText.canvas || (renderVivoStackText.canvas = document.createElement("canvas"));
+      const ctx = canvas.getContext("2d");
+      ctx.font = canvasFont(size, family);
+      const baselineY = layoutTopPx + ascentPx;
+      const lineBoxes = lines.map(line => {
+        const displayLine = line || " ";
+        const metrics = ctx.measureText(displayLine);
+        const actualAscent = Number(metrics.actualBoundingBoxAscent || size * 0.8);
+        const textTop = baselineY - actualAscent;
+        return `
+          <div class="vivo-stack-linebox" style="width:${widthPx.toFixed(3)}px;height:${containerLinePx.toFixed(3)}px;">
+            <span class="vivo-stack-guide" style="top:0;"></span>
+            <span class="vivo-stack-guide" style="bottom:0;"></span>
+            <div class="vivo-stack-inner" style="top:${textTop.toFixed(3)}px;width:${widthPx.toFixed(3)}px;font-family:'${escapeHtml(family)}',sans-serif;font-size:${size}px;line-height:${size}px;">${escapeHtml(displayLine)}</div>
+          </div>
+        `;
+      }).join("");
+      const details = [
+        `当前: vivo 逐行独立容器推导`,
+        `行高来源 ${active.source}`,
+        `容器基准 ${containerBasisLabel(basisMode)}=${basisValue}`,
+        `单行容器 ${containerLinePx.toFixed(2)}px`,
+        `metrics行高 ${lineHeightPx.toFixed(2)}px`,
+        `baseline ${baselineY.toFixed(2)}px`,
+        `单行溢出 ${(lineHeightPx - containerLinePx).toFixed(2)}px`,
+        `共 ${lineCount} 行，每行独立裁切`
+      ].join(" / ");
+      return `
+        <div class="vivo-metric-strip">${escapeHtml(details)}</div>
+        <div class="vivo-stack-wrap" style="width:${widthPx.toFixed(3)}px;">
+          ${lineBoxes}
+        </div>
+      `;
+    }
+
+    function metricCard(label, value) {
+      return `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+    }
+
+    function openGlyphDialog(target) {
+      const data = target.dataset;
+      const info = {
+        char: data.char || "",
+        family: data.family || "sans-serif",
+        size: Number(data.size || 56),
+        advance: Number(data.advance || 0),
+        left: Number(data.left || 0),
+        right: Number(data.right || 0),
+        ascent: Number(data.ascent || 0),
+        descent: Number(data.descent || 0),
+        leftOverflow: Number(data.leftOverflow || 0),
+        rightOverflow: Number(data.rightOverflow || 0),
+        topOverflow: Number(data.topOverflow || 0),
+        bottomOverflow: Number(data.bottomOverflow || 0),
+        clipTop: Number(data.clipTop || 0),
+        clipBottom: Number(data.clipBottom || 0),
+        metricSource: data.metricSource || "",
+        codepoints: data.codepoints || ""
+      };
+
+      glyphDialogTitle.textContent = `字符裁切详情：${info.char === " " ? "空格" : info.char}`;
+      glyphMetrics.innerHTML = [
+        metricCard("字符", info.char === " " ? "空格" : info.char),
+        metricCard("编码", info.codepoints),
+        metricCard("字号", `${info.size}px`),
+        metricCard("metrics 来源", info.metricSource || "未记录"),
+        metricCard("advance 宽度", `${info.advance.toFixed(2)}px`),
+        metricCard("实际左边界", `${(-info.left).toFixed(2)}px`),
+        metricCard("实际右边界", `${info.right.toFixed(2)}px`),
+        metricCard("左侧被裁", `${info.leftOverflow.toFixed(2)}px`),
+        metricCard("右侧被裁", `${info.rightOverflow.toFixed(2)}px`),
+        metricCard("实际上边界", `${(-info.ascent).toFixed(2)}px`),
+        metricCard("实际下边界", `${info.descent.toFixed(2)}px`),
+        metricCard("裁切上边界", `${info.clipTop.toFixed(2)}px`),
+        metricCard("裁切下边界", `${info.clipBottom.toFixed(2)}px`),
+        metricCard("上方被裁", `${info.topOverflow.toFixed(2)}px`),
+        metricCard("下方被裁", `${info.bottomOverflow.toFixed(2)}px`)
+      ].join("");
+
+      drawGlyphDetail(info);
+      glyphDialog.classList.add("is-visible");
+      glyphDialog.setAttribute("aria-hidden", "false");
+    }
+
+    function closeGlyphDialog() {
+      glyphDialog.classList.remove("is-visible");
+      glyphDialog.setAttribute("aria-hidden", "true");
+    }
+
+    function drawGlyphDetail(info) {
+      const canvas = glyphCanvas;
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = 900;
+      const cssHeight = 430;
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+      const pad = 74;
+      const contentW = cssWidth - pad * 2;
+      const contentH = cssHeight - 116;
+      const leftX = -info.left;
+      const rightX = Math.max(info.advance, info.right, 1);
+      const topY = -Math.max(info.ascent, info.size * 0.8);
+      const bottomY = Math.max(info.descent, info.size * 0.25);
+      const scaleX = contentW / Math.max(1, rightX - leftX);
+      const scaleY = contentH / Math.max(1, bottomY - topY);
+      const scale = Math.min(scaleX, scaleY, 3.6);
+      const originX = pad + (-leftX) * scale + 20;
+      const baselineY = 74 + (-topY) * scale;
+
+      function x(value) {
+        return originX + value * scale;
+      }
+      function y(value) {
+        return baselineY + value * scale;
+      }
+
+      const clipLeft = x(0);
+      const clipRight = x(info.advance);
+      const boxTop = y(-info.ascent);
+      const boxBottom = y(info.descent);
+      const actualLeft = x(-info.left);
+      const actualRight = x(info.right);
+      const verticalClipTop = y(info.clipTop || -info.ascent);
+      const verticalClipBottom = y(info.clipBottom || info.descent);
+
+      ctx.strokeStyle = "#176bff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(clipLeft, boxTop - 18, clipRight - clipLeft, boxBottom - boxTop + 36);
+      if (info.topOverflow > 0 || info.bottomOverflow > 0) {
+        ctx.beginPath();
+        ctx.moveTo(Math.min(actualLeft, clipLeft) - 24, verticalClipTop);
+        ctx.lineTo(Math.max(actualRight, clipRight) + 24, verticalClipTop);
+        ctx.moveTo(Math.min(actualLeft, clipLeft) - 24, verticalClipBottom);
+        ctx.lineTo(Math.max(actualRight, clipRight) + 24, verticalClipBottom);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "#b42318";
+      ctx.setLineDash([7, 5]);
+      ctx.strokeRect(actualLeft, boxTop, actualRight - actualLeft, boxBottom - boxTop);
+      ctx.setLineDash([]);
+
+      ctx.strokeStyle = "#12805c";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.min(actualLeft, clipLeft) - 28, baselineY);
+      ctx.lineTo(Math.max(actualRight, clipRight) + 28, baselineY);
+      ctx.stroke();
+
+      ctx.font = canvasFont(info.size * scale, info.family);
+      ctx.fillStyle = "#111418";
+      ctx.fillText(info.char, originX, baselineY);
+
+      ctx.fillStyle = "rgba(180, 35, 24, 0.22)";
+      if (info.leftOverflow > 0) {
+        ctx.fillRect(actualLeft, boxTop - 18, clipLeft - actualLeft, boxBottom - boxTop + 36);
+      }
+      if (info.rightOverflow > 0) {
+        ctx.fillRect(clipRight, boxTop - 18, actualRight - clipRight, boxBottom - boxTop + 36);
+      }
+      if (info.topOverflow > 0) {
+        ctx.fillRect(Math.min(actualLeft, clipLeft), boxTop, Math.max(actualRight, clipRight) - Math.min(actualLeft, clipLeft), verticalClipTop - boxTop);
+      }
+      if (info.bottomOverflow > 0) {
+        ctx.fillRect(Math.min(actualLeft, clipLeft), verticalClipBottom, Math.max(actualRight, clipRight) - Math.min(actualLeft, clipLeft), boxBottom - verticalClipBottom);
+      }
+
+      ctx.font = "13px -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif";
+      ctx.fillStyle = "#176bff";
+      ctx.fillText("蓝框：advance 裁切盒", 24, cssHeight - 54);
+      ctx.fillStyle = "#b42318";
+      ctx.fillText("红虚线：实际字形边界", 24, cssHeight - 32);
+      ctx.fillStyle = "#12805c";
+      ctx.fillText("绿线：baseline", 250, cssHeight - 32);
+      ctx.fillStyle = "#b42318";
+      ctx.fillText("红色半透明：按当前模式裁切会损失的区域；字形本身完整显示", 250, cssHeight - 54);
+    }
+
+    async function loadFont(file, index) {
+      const family = `LocalCheckFont_${Date.now()}_${index}`;
+      const url = URL.createObjectURL(file);
+      loadedUrls.push(url);
+      const fontFace = new FontFace(family, `url(${url})`);
+      await fontFace.load();
+      document.fonts.add(fontFace);
+      return family;
+    }
+
+    async function handleFolderChange() {
+      resetRenderedFonts();
+      selectedFonts.clear();
+      updateSelectionPanel();
+      resultTable.innerHTML = "";
+      tableWrap.classList.remove("is-visible");
+      empty.style.display = "grid";
+
+      const allFiles = Array.from(folderInput.files || []);
+      skippedFiles = allFiles.filter(file => /\.ttf$/i.test(file.name) && isInArchiveFolder(file)).length;
+      fonts = allFiles
+        .filter(file => /\.ttf$/i.test(file.name))
+        .filter(file => !isInArchiveFolder(file))
+        .sort((a, b) => (a.webkitRelativePath || a.name).localeCompare(b.webkitRelativePath || b.name, "zh-Hans-CN"));
+
+      updateControls();
+
+      if (fonts.length === 0) {
+        showNotice("没有找到可用的 TTF 文件。请确认文件夹内有 .ttf，并且它们不在“归档”子文件夹里。", true);
+      } else {
+        showNotice(`已读取 ${fonts.length} 个 TTF 文件，跳过“归档”内 ${skippedFiles} 个 TTF。`);
+      }
+    }
+
+    async function renderResults() {
+      const previewText = getPreviewText();
+      updateControls();
+
+      if (fonts.length === 0) {
+        showNotice("请先选择包含 TTF 的文件夹。", true);
+        return;
+      }
+      if (previewText.length === 0) {
+        showNotice("请输入要检查的文本。", true);
+        return;
+      }
+
+      resetRenderedFonts();
+      resultTable.innerHTML = "";
+      tableWrap.classList.remove("is-visible");
+      empty.style.display = "grid";
+      empty.innerHTML = "<div><strong>正在加载字体并生成预览...</strong><br>字体较多时需要等一会儿。</div>";
+      showNotice("");
+
+      const previewSize = getPreviewSize();
+      const darkClass = darkInput.checked ? " dark-preview" : "";
+      const honorMode = honorInput.checked;
+      const vivoMode = vivoInput.checked;
+      const vivoStackMode = vivoStackInput.checked;
+      const vivoMetricSourceMode = getVivoMetricSourceMode();
+      const vivoMetricSourceLabel = METRIC_SOURCE_LABELS[vivoMetricSourceMode] || "Auto";
+      const vivoContainerBasisMode = getVivoContainerBasisMode();
+      const vivoContainerBasisLabel = containerBasisLabel(vivoContainerBasisMode);
+      const previewMode = vivoMode ? "vivo" : honorMode ? "honor" : "normal";
+      const previewHeading = previewMode === "vivo"
+        ? vivoStackMode
+          ? `vivo 逐行容器推导：${vivoMetricSourceLabel} / ${vivoContainerBasisLabel}`
+          : `vivo TTF metrics 裁切预览：${vivoMetricSourceLabel}`
+        : previewMode === "honor"
+          ? "荣耀模式裁切预览"
+          : "正常文本预览";
+
+      const loadedFonts = [];
+      for (let i = 0; i < fonts.length; i++) {
+        try {
+          const [family, metrics] = await Promise.all([
+            loadFont(fonts[i], i),
+            parseTtfMetrics(fonts[i])
+          ]);
+          loadedFonts.push({ file: fonts[i], family, metrics, error: "" });
+        } catch (error) {
+          loadedFonts.push({ file: fonts[i], family: "sans-serif", metrics: null, error: "字体加载或 metrics 读取失败" });
+        }
+      }
+
+      const bodyRows = loadedFonts.map(item => {
+        const path = item.file.webkitRelativePath || item.file.name;
+        const selectionKey = fontSelectionKey(item.file);
+        const fontName = fileBaseName(item.file);
+        const checked = selectedFonts.has(selectionKey) ? " checked" : "";
+        const previewClass = previewMode === "vivo"
+          ? "preview-box is-vivo"
+          : previewMode === "honor"
+            ? "preview-box is-honor"
+            : "preview-box";
+        const previewContent = previewMode === "vivo"
+          ? vivoStackMode
+            ? renderVivoStackText(previewText, item.family, previewSize, item.metrics, vivoMetricSourceMode, vivoContainerBasisMode)
+            : renderVivoText(previewText, item.family, previewSize, item.metrics, vivoMetricSourceMode)
+          : previewMode === "honor"
+            ? renderHonorText(previewText, item.family, previewSize)
+            : escapeHtml(previewText);
+        return `
+          <tr>
+            <td class="font-cell">
+              <span class="font-name">${escapeHtml(fontName)}${item.error ? " · 加载失败" : ""}</span>
+              <span class="font-path">${escapeHtml(path)}</span>
+            </td>
+            <td class="preview-cell${darkClass}">
+              <div class="${previewClass}" style="font-family: '${item.family}', sans-serif; font-size: ${previewSize}px;">${previewContent}</div>
+            </td>
+            <td class="pick-cell">
+              <label class="font-picker">
+                <input class="font-select" type="checkbox" data-key="${escapeHtml(selectionKey)}" data-name="${escapeHtml(fontName)}"${checked}>
+                <span>勾选</span>
+              </label>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      resultTable.innerHTML = `
+        <thead>
+          <tr>
+            <th class="font-head">字体</th>
+            <th>${previewHeading}</th>
+            <th class="pick-head">勾选</th>
+          </tr>
+        </thead>
+        <tbody>${bodyRows}</tbody>
+      `;
+
+      empty.style.display = "none";
+      tableWrap.classList.add("is-visible");
+      const clippedCount = previewMode === "normal" ? 0 : resultTable.querySelectorAll(".is-clipped").length;
+      const modeNotice = previewMode === "vivo"
+        ? vivoStackMode
+          ? `vivo 逐行容器推导已按 ${vivoMetricSourceLabel} / ${vivoContainerBasisLabel} 预览。`
+          : `vivo 模式已按 ${vivoMetricSourceLabel} 垂直 metrics 裁切预览，标红 ${clippedCount} 处。`
+        : previewMode === "honor"
+          ? `荣耀模式已按字符 advance 宽度裁切预览，标红 ${clippedCount} 处。`
+          : "按输入文本原样预览。";
+      showNotice(`完成：${loadedFonts.length} 个字体，${modeNotice}`);
+    }
+
+    folderInput.addEventListener("change", handleFolderChange);
+    charInput.addEventListener("input", updateControls);
+    renderButton.addEventListener("click", renderResults);
+    copySelectionButton.addEventListener("click", copySelectedFonts);
+    clearSelectionButton.addEventListener("click", clearSelectedFonts);
+    stripSpacesButton.addEventListener("click", removeSpacesFromCurrentText);
+    addPresetButton.addEventListener("click", addCurrentTextAsPreset);
+    presetList.addEventListener("click", event => {
+      const deleteButton = event.target.closest(".preset-delete");
+      if (deleteButton) {
+        deletePreset(Number(deleteButton.dataset.index));
+        return;
+      }
+
+      const useButton = event.target.closest(".preset-use");
+      if (useButton) {
+        const text = presets[Number(useButton.dataset.index)] || "";
+        setPreviewText(text);
+        presetMenu.open = false;
+      }
+    });
+    document.addEventListener("click", event => {
+      if (!presetMenu.open || presetMenu.contains(event.target)) return;
+      presetMenu.open = false;
+    });
+    sizeInput.addEventListener("input", () => {
+      updateControls();
+      if (tableWrap.classList.contains("is-visible")) scheduleRender();
+    });
+    darkInput.addEventListener("change", () => {
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    honorInput.addEventListener("change", () => {
+      if (honorInput.checked) vivoInput.checked = false;
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    vivoInput.addEventListener("change", () => {
+      if (vivoInput.checked) honorInput.checked = false;
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    vivoStackInput.addEventListener("change", () => {
+      if (vivoStackInput.checked) {
+        vivoInput.checked = true;
+        honorInput.checked = false;
+      }
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    vivoMetricSourceInput.addEventListener("change", () => {
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    vivoContainerBasisInput.addEventListener("change", () => {
+      if (tableWrap.classList.contains("is-visible")) renderResults();
+    });
+    resultTable.addEventListener("dblclick", event => {
+      const glyph = event.target.closest(".honor-glyph.is-clipped, .vivo-glyph.is-clipped");
+      if (glyph) openGlyphDialog(glyph);
+    });
+    resultTable.addEventListener("change", event => {
+      if (!event.target.classList.contains("font-select")) return;
+      const input = event.target;
+      if (input.checked) {
+        selectedFonts.set(input.dataset.key, input.dataset.name);
+      } else {
+        selectedFonts.delete(input.dataset.key);
+      }
+      updateSelectionPanel();
+    });
+    glyphDialogClose.addEventListener("click", closeGlyphDialog);
+    glyphDialog.addEventListener("click", event => {
+      if (event.target === glyphDialog) closeGlyphDialog();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && glyphDialog.classList.contains("is-visible")) {
+        closeGlyphDialog();
+      }
+    });
+
+    renderPresets();
+    restoreSelectionFloatPosition();
+    makeSelectionFloatDraggable();
+    updateControls();
+    updateSelectionPanel();
+  </script>
+</body>
+</html>

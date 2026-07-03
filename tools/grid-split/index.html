@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网格图片分割工具 v3</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f3f4f6;
+      padding: 16px;
+      color: #222;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 320px minmax(520px, 860px) 340px;
+      gap: 16px;
+      max-width: 1560px;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+    }
+
+    .controls, .side-panel {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .panel-head h2 {
+      font-size: 16px;
+      color: #333;
+      line-height: 1.2;
+    }
+
+    .back-btn {
+      display: inline-block;
+      padding: 6px 10px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .back-btn:hover { background: #e0e0e0; color: #333; }
+
+    .group { margin-bottom: 14px; }
+    .group:last-child { margin-bottom: 0; }
+
+    .group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    .row2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .row2 input[type="number"] {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .row2 span { color: #888; font-size: 14px; }
+
+    .group input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .val {
+      text-align: right;
+      font-size: 12px;
+      color: #888;
+      margin-top: 3px;
+    }
+
+    /* 上传区域 */
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 16px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #007AFF;
+      background: #f0f7ff;
+    }
+
+    .upload-area input { display: none; }
+    .upload-area .icon { font-size: 26px; }
+    .upload-area .text { font-size: 13px; color: #666; margin-top: 6px; }
+    .upload-area .loaded { font-size: 12px; color: #28a745; margin-top: 6px; font-weight: 600; }
+
+    /* 日志文本框 */
+    #logBox {
+      width: 100%;
+      height: 132px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      color: #333;
+      background: #fafafa;
+      resize: vertical;
+      overflow-y: auto;
+    }
+
+    /* 字符命名 */
+    textarea#charNames {
+      width: 100%;
+      height: 190px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: monospace;
+      resize: vertical;
+    }
+
+    .count-info { font-size: 12px; color: #888; margin-top: 4px; }
+    .count-error { font-size: 12px; color: #dc3545; margin-top: 4px; display: none; }
+
+    /* 按钮 */
+    .btn {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 0;
+      line-height: 1.25;
+    }
+
+    .btn-primary { background: #007AFF; color: white; }
+    .btn-primary:hover { background: #0056CC; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+    .btn-svg {
+      background: #34C759;
+      color: white;
+    }
+
+    .btn-svg:hover { background: #248a3d; }
+    .btn-svg:disabled { background: #ccc; cursor: not-allowed; }
+
+    .btn-import { background: #28a745; color: #fff; }
+    .btn-import:hover { background: #208838; }
+    .btn-detect { background: #ff9500; color: #fff; }
+    .btn-detect:hover { background: #d97800; }
+    .btn-reset { background: #666; color: #fff; }
+    .btn-reset:hover { background: #555; }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .action-grid .wide { grid-column: 1 / -1; }
+
+    .btn-sm {
+      width: auto;
+      padding: 6px 14px;
+      font-size: 13px;
+      margin-top: 6px;
+      margin-right: 6px;
+    }
+
+    /* 右侧画布区域 */
+    .canvas-panel {
+      min-height: 200px;
+      overflow: hidden;
+    }
+
+    .canvas-panel h2 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+      max-height: calc(100vh - 150px);
+      overflow: auto;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    #mainCanvas {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      cursor: default;
+    }
+
+    .empty-hint {
+      color: #bbb;
+      font-size: 14px;
+      padding: 52px 0;
+      text-align: center;
+    }
+
+    /* 状态栏 */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #fafafa;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .status-bar .hint { color: #007AFF; font-weight: 500; }
+
+    .mini-note {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    /* 加载遮罩 */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .overlay .box {
+      background: white;
+      padding: 28px 48px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .overlay .spin {
+      font-size: 30px;
+      animation: spin 1s linear infinite;
+      display: block;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none; }
+
+    #cropCanvas { display: none; }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn-row .btn {
+      flex: 1;
+      margin-top: 0;
+    }
+
+    @media (max-width: 1220px) {
+      .container {
+        grid-template-columns: 300px minmax(440px, 1fr);
+      }
+
+      .side-panel {
+        grid-column: 1 / -1;
+        position: static;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 860px) {
+      body { padding: 10px; }
+      .container { grid-template-columns: 1fr; }
+      .controls, .side-panel {
+        position: static;
+        max-height: none;
+      }
+      .status-bar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- 左侧控制面板 -->
+  <div class="controls panel">
+    <div class="panel-head">
+      <h2>✂️ 网格分割工具 v3</h2>
+      <button class="back-btn" onclick="location.href='../../index.html'">← 返回</button>
+    </div>
+
+    <div class="group">
+      <label>上传图片</label>
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">🖼️</div>
+        <div class="text">点击或拖拽上传 PNG / JPG</div>
+        <div class="loaded hidden" id="loadedName"></div>
+        <input type="file" id="imageFile" accept="image/*">
+      </div>
+    </div>
+
+    <div class="group">
+      <label>分割数量（行 × 列）</label>
+      <div class="row2">
+        <input type="number" id="gridRows" value="11" min="1" max="50">
+        <span>×</span>
+        <input type="number" id="gridCols" value="11" min="1" max="50">
+      </div>
+      <div class="mini-note">修改后自动重新生成分割线</div>
+    </div>
+
+    <div class="group">
+      <label>裁切边距（去黑线宽度）</label>
+      <input type="range" id="margin" value="3" min="0" max="20" step="1">
+      <div class="val" id="marginVal">3px</div>
+    </div>
+  </div>
+
+  <!-- 中间画布区域 -->
+  <div class="canvas-panel panel">
+    <h2>📐 裁切预览</h2>
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <div class="empty-hint" id="emptyHint">上传图片后显示交互式分割预览</div>
+      <canvas id="mainCanvas"></canvas>
+    </div>
+    <div class="status-bar hidden" id="statusBar">
+      <span><span id="cellCount">0</span> 个区域 | 边距 <span id="marginDisplay">3</span>px</span>
+      <span class="hint">💡 拖拽外框四边裁边 · 拖拽内部线调整格子</span>
+    </div>
+  </div>
+
+  <!-- 右侧操作面板 -->
+  <div class="side-panel panel">
+    <div class="panel-head">
+      <h2>操作与命名</h2>
+    </div>
+
+    <div class="group">
+      <label>主要操作</label>
+      <div class="action-grid">
+        <button class="btn btn-primary" id="downloadPngBtn" onclick="doExportPng()" disabled>
+          🖼️ 下载 PNG ZIP
+        </button>
+        <button class="btn btn-svg" id="downloadSvgBtn" onclick="doExportSvg()" disabled>
+          📐 下载 SVG ZIP
+        </button>
+        <button class="btn btn-detect" onclick="autoDetectGridLines()">🎯 识别网格线</button>
+        <button class="btn btn-reset" onclick="resetLines()">🔄 均匀分割</button>
+        <button class="btn btn-import wide" onclick="load121txt()">📄 从 121.txt 导入命名</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <label>字符命名（每行对应一行格子，逗号分隔）</label>
+      <textarea id="charNames" placeholder="留空则自动命名 01,02,03..."></textarea>
+      <div class="count-info" id="countInfo">已输入: 0 / 121 个</div>
+      <div class="count-error" id="countError"></div>
+    </div>
+
+    <div class="group">
+      <label>日志</label>
+      <textarea id="logBox" readonly>等待操作...</textarea>
+    </div>
+  </div>
+
+</div>
+
+<canvas id="cropCanvas"></canvas>
+
+<div class="overlay hidden" id="overlay">
+  <div class="box">
+    <span class="spin">⏳</span>
+    <div style="margin-top:12px;font-size:14px;" id="overlayMsg">正在处理...</div>
+    <div style="margin-top:6px;font-size:12px;color:#888" id="overlayProgress"></div>
+  </div>
+</div>
+
+<script src="../../assets/vendor/jszip.min.js"></script>
+<script src="./lib/potrace-wasm.js"></script>
+
+<script>
+// ── Potrace WASM 就绪通知 ──
+// potrace-wasm.js 内嵌 base64 WASM (data URI)，无需外部 .wasm 文件
+// 加载后自动导出: window.potraceFromImageData, window.potraceFromCanvas, window.potraceReady
+if (window.potraceReady) {
+  window.potraceReady.then(function () {
+    console.log('[Potrace] WASM 引擎已就绪');
+    if (typeof log === 'function') log('✓ Potrace WASM 引擎已就绪（本地 potrace-wasm）');
+  }).catch(function (err) {
+    console.error('[Potrace] WASM 加载失败:', err);
+    if (typeof log === 'function') log('⚠️ Potrace WASM 加载失败，SVG 导出不可用');
+  });
+}
+</script>
+<script>
+// ── 全局状态 ──
+let sourceImage = null;
+let sourceFileName = '';   // 原始文件名（不含扩展名）
+let sourceFileExt = 'png'; // 原始扩展名
+let ctxMain = null;
+let ctxCrop = null;
+
+// 分割线位置
+let hLines = [];
+let vLines = [];
+let gridBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+
+// 拖拽状态
+let dragState = null;
+
+let displayScale = 1;
+
+// ── DOM refs ──
+const uploadArea   = document.getElementById('uploadArea');
+const imageFile    = document.getElementById('imageFile');
+const loadedName   = document.getElementById('loadedName');
+const logBox       = document.getElementById('logBox');
+const gridRows     = document.getElementById('gridRows');
+const gridCols     = document.getElementById('gridCols');
+const marginSlider = document.getElementById('margin');
+const marginVal    = document.getElementById('marginVal');
+const charNames    = document.getElementById('charNames');
+const countInfo    = document.getElementById('countInfo');
+const countError   = document.getElementById('countError');
+const downloadPngBtn = document.getElementById('downloadPngBtn');
+const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+const mainCanvas   = document.getElementById('mainCanvas');
+const canvasWrapper = document.getElementById('canvasWrapper');
+const cropCanvas   = document.getElementById('cropCanvas');
+const overlay      = document.getElementById('overlay');
+const overlayMsg    = document.getElementById('overlayMsg');
+const overlayProg  = document.getElementById('overlayProgress');
+const emptyHint    = document.getElementById('emptyHint');
+const statusBar    = document.getElementById('statusBar');
+
+ctxMain = mainCanvas.getContext('2d');
+ctxCrop = cropCanvas.getContext('2d');
+
+// ── 日志 ──
+function log(msg) {
+  const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const el = logBox;
+  el.value = `[${ts}] ${msg}\n` + el.value;
+  el.scrollTop = 0;
+}
+
+// ── 上传 ──
+uploadArea.addEventListener('click', () => imageFile.click());
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadImage(f);
+});
+imageFile.addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) loadImage(f);
+});
+
+function loadImage(file) {
+  // 解析文件名（不含扩展名）
+  const name = file.name;
+  const dot = name.lastIndexOf('.');
+  sourceFileName = dot > 0 ? name.substring(0, dot) : name;
+  sourceFileExt = dot > 0 ? name.substring(dot + 1).toLowerCase() : 'png';
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      cropCanvas.width  = img.width;
+      cropCanvas.height = img.height;
+      ctxCrop.drawImage(img, 0, 0);
+
+      loadedName.textContent = '✓ ' + name;
+      loadedName.classList.remove('hidden');
+      downloadPngBtn.disabled = false;
+      downloadSvgBtn.disabled = false;
+
+      log(`已导入: ${name} (${img.width}×${img.height})`);
+      initLines();
+      autoDetectGridLines({ silent: true });
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── 分割线初始化 ──
+function initLines() {
+  if (!sourceImage) return;
+  const rows = parseInt(gridRows.value) || 1;
+  const cols = parseInt(gridCols.value) || 1;
+  const W = sourceImage.width;
+  const H = sourceImage.height;
+  gridBounds = { left: 0, top: 0, right: W, bottom: H };
+
+  hLines = [];
+  for (let i = 1; i < rows; i++) hLines.push(Math.round(H * i / rows));
+
+  vLines = [];
+  for (let j = 1; j < cols; j++) vLines.push(Math.round(W * j / cols));
+}
+
+function resetLines() {
+  initLines();
+  render();
+  log('已重置为均匀分割线');
+}
+
+function smoothScores(scores, radius) {
+  const out = new Array(scores.length).fill(0);
+  let sum = 0;
+  for (let i = 0; i < scores.length; i++) {
+    sum += scores[i];
+    if (i > radius) sum -= scores[i - radius - 1];
+    const left = Math.max(0, i - radius);
+    out[i] = sum / (i - left + 1);
+  }
+  sum = 0;
+  const final = new Array(scores.length).fill(0);
+  for (let i = scores.length - 1; i >= 0; i--) {
+    sum += out[i];
+    if (i < scores.length - radius - 1) sum -= out[i + radius + 1];
+    const right = Math.min(scores.length - 1, i + radius);
+    final[i] = sum / (right - i + 1);
+  }
+  return final;
+}
+
+function getDarkProjection(imageData, width, height, axis) {
+  const data = imageData.data;
+  const length = axis === 'x' ? width : height;
+  const scores = new Array(length).fill(0);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const p = (y * width + x) * 4;
+      if (data[p + 3] < 24) continue;
+      const lum = data[p] * 0.299 + data[p + 1] * 0.587 + data[p + 2] * 0.114;
+      if (lum < 130) scores[axis === 'x' ? x : y]++;
+    }
+  }
+
+  return smoothScores(scores, 1);
+}
+
+function findGridPeaks(scores) {
+  const maxScore = Math.max(...scores);
+  if (maxScore <= 0) return [];
+
+  const avg = scores.reduce((sum, n) => sum + n, 0) / scores.length;
+  const threshold = Math.max(maxScore * 0.42, avg + (maxScore - avg) * 0.38);
+  const peaks = [];
+  let start = -1;
+  let scoreSum = 0;
+  let weightedSum = 0;
+  let bestScore = 0;
+
+  for (let i = 0; i <= scores.length; i++) {
+    const score = i < scores.length ? scores[i] : 0;
+    if (score >= threshold) {
+      if (start < 0) {
+        start = i;
+        scoreSum = 0;
+        weightedSum = 0;
+        bestScore = 0;
+      }
+      scoreSum += score;
+      weightedSum += score * i;
+      bestScore = Math.max(bestScore, score);
+    } else if (start >= 0) {
+      peaks.push({
+        center: scoreSum ? weightedSum / scoreSum : (start + i - 1) / 2,
+        start,
+        end: i - 1,
+        score: bestScore
+      });
+      start = -1;
+    }
+  }
+
+  return peaks;
+}
+
+function pickDetectedLines(peaks, divisions, start, end) {
+  const lines = [];
+  const size = end - start;
+  const approxCell = size / divisions;
+  const searchRadius = Math.max(12, approxCell * 0.36);
+
+  for (let i = 1; i < divisions; i++) {
+    const expected = start + size * i / divisions;
+    const candidates = peaks
+      .map(peak => ({ peak, dist: Math.abs(peak.center - expected) }))
+      .filter(item => item.dist <= searchRadius)
+      .sort((a, b) => (b.peak.score / (1 + b.dist)) - (a.peak.score / (1 + a.dist)));
+    lines.push(Math.round(candidates[0] ? candidates[0].peak.center : expected));
+  }
+
+  return lines;
+}
+
+function pickBoundaryPeak(peaks, expected, size, searchRadius) {
+  const candidates = peaks
+    .map(peak => ({ peak, dist: Math.abs(peak.center - expected) }))
+    .filter(item => item.dist <= searchRadius)
+    .sort((a, b) => (b.peak.score / (1 + b.dist)) - (a.peak.score / (1 + a.dist)));
+  if (!candidates[0]) return Math.round(expected);
+  return Math.round(candidates[0].peak.center);
+}
+
+function countMovedLines(detected, uniform) {
+  let moved = 0;
+  for (let i = 0; i < detected.length; i++) {
+    if (Math.abs(detected[i] - uniform[i]) > 1) moved++;
+  }
+  return moved;
+}
+
+function autoDetectGridLines(options = {}) {
+  if (!sourceImage) return;
+
+  const rows = parseInt(gridRows.value) || 1;
+  const cols = parseInt(gridCols.value) || 1;
+  const W = sourceImage.width;
+  const H = sourceImage.height;
+  const imageData = ctxCrop.getImageData(0, 0, W, H);
+
+  const uniformH = [];
+  for (let i = 1; i < rows; i++) uniformH.push(Math.round(H * i / rows));
+  const uniformV = [];
+  for (let j = 1; j < cols; j++) uniformV.push(Math.round(W * j / cols));
+
+  const hPeaks = findGridPeaks(getDarkProjection(imageData, W, H, 'y'));
+  const vPeaks = findGridPeaks(getDarkProjection(imageData, W, H, 'x'));
+
+  const hCell = H / rows;
+  const vCell = W / cols;
+  gridBounds = {
+    left: pickBoundaryPeak(vPeaks, 0, W, Math.max(10, vCell * 0.28)),
+    top: pickBoundaryPeak(hPeaks, 0, H, Math.max(10, hCell * 0.28)),
+    right: pickBoundaryPeak(vPeaks, W, W, Math.max(10, vCell * 0.28)),
+    bottom: pickBoundaryPeak(hPeaks, H, H, Math.max(10, hCell * 0.28))
+  };
+  hLines = pickDetectedLines(hPeaks, rows, gridBounds.top, gridBounds.bottom);
+  vLines = pickDetectedLines(vPeaks, cols, gridBounds.left, gridBounds.right);
+  render();
+
+  if (!options.silent) {
+    const moved = countMovedLines(hLines, uniformH) + countMovedLines(vLines, uniformV);
+    log(`✓ 已自动识别网格线：横线 ${hLines.length} 条，竖线 ${vLines.length} 条，调整 ${moved} 条`);
+  }
+}
+
+// ── 控件变化 ──
+gridRows.addEventListener('input', () => { updateCountInfo(); initLines(); autoDetectGridLines({ silent: true }); render(); });
+gridCols.addEventListener('input', () => { updateCountInfo(); initLines(); autoDetectGridLines({ silent: true }); render(); });
+charNames.addEventListener('input', updateCountInfo);
+marginSlider.addEventListener('input', () => {
+  marginVal.textContent = marginSlider.value + 'px';
+  document.getElementById('marginDisplay').textContent = marginSlider.value;
+  if (sourceImage) render();
+});
+window.addEventListener('resize', () => {
+  if (sourceImage) render();
+});
+
+function parseNames() {
+  const text = charNames.value.trim();
+  if (!text) return [];
+  return text.split('\n')
+    .flatMap(line => line.split(',').map(s => s.trim()))
+    .filter(s => s);
+}
+
+function updateCountInfo() {
+  const total = (parseInt(gridRows.value) || 1) * (parseInt(gridCols.value) || 1);
+  const names = parseNames();
+  countInfo.textContent = `已输入: ${names.length} / ${total} 个`;
+  if (names.length > 0 && names.length !== total) {
+    countError.textContent = `⚠️ 数量不匹配！需要 ${total} 个`;
+    countError.style.display = 'block';
+  } else {
+    countError.style.display = 'none';
+  }
+}
+
+// ── 从 121.txt 加载 ──
+async function load121txt() {
+  try {
+    const resp = await fetch('../../data/121.txt');
+    if (!resp.ok) throw new Error('文件读取失败');
+    const text = await resp.text();
+    charNames.value = text;
+    updateCountInfo();
+    const count = parseNames().length;
+    log(`✓ 已从 121.txt 导入 ${count} 个字符名`);
+  } catch (e) {
+    log(`✗ 读取 121.txt 失败: ${e.message}`);
+  }
+}
+
+// 页面加载时自动尝试读取 121.txt
+window.addEventListener('DOMContentLoaded', () => {
+  load121txt();
+});
+
+// ── 渲染 ──
+function render() {
+  if (!sourceImage) return;
+
+  const rows   = parseInt(gridRows.value) || 1;
+  const cols   = parseInt(gridCols.value) || 1;
+  const margin = parseInt(marginSlider.value) || 0;
+  const W = sourceImage.width;
+  const H = sourceImage.height;
+
+  const wrapperW = Math.max(320, canvasWrapper.clientWidth - 22);
+  const wrapperH = Math.max(320, window.innerHeight - 170);
+  const maxPreviewSize = 650;
+  const maxW = Math.min(maxPreviewSize, wrapperW);
+  const maxH = Math.min(maxPreviewSize, wrapperH);
+  displayScale = Math.min(maxW / W, maxH / H, 0.85);
+
+  const dW = Math.round(W * displayScale);
+  const dH = Math.round(H * displayScale);
+  const bLeft = Math.round(gridBounds.left * displayScale);
+  const bTop = Math.round(gridBounds.top * displayScale);
+  const bRight = Math.round(gridBounds.right * displayScale);
+  const bBottom = Math.round(gridBounds.bottom * displayScale);
+
+  mainCanvas.width  = dW;
+  mainCanvas.height = dH;
+
+  ctxMain.drawImage(sourceImage, 0, 0, dW, dH);
+
+  if (margin > 0) {
+    const cropBand = margin * displayScale;
+    ctxMain.fillStyle = 'rgba(255,59,48,0.22)';
+
+    // 预览真实导出时会被裁掉的区域：外边裁 margin，内线两侧各裁 margin。
+    ctxMain.fillRect(bLeft, bTop, bRight - bLeft, cropBand);
+    ctxMain.fillRect(bLeft, Math.max(bTop, bBottom - cropBand), bRight - bLeft, cropBand);
+    ctxMain.fillRect(bLeft, bTop, cropBand, bBottom - bTop);
+    ctxMain.fillRect(Math.max(bLeft, bRight - cropBand), bTop, cropBand, bBottom - bTop);
+
+    for (let i = 0; i < hLines.length; i++) {
+      const y = hLines[i] * displayScale;
+      ctxMain.fillRect(bLeft, Math.max(bTop, y - cropBand), bRight - bLeft, cropBand * 2);
+    }
+
+    for (let j = 0; j < vLines.length; j++) {
+      const x = vLines[j] * displayScale;
+      ctxMain.fillRect(Math.max(bLeft, x - cropBand), bTop, cropBand * 2, bBottom - bTop);
+    }
+  }
+
+  const lineW = Math.max(2, Math.min(5, margin * displayScale + 1));
+  ctxMain.lineWidth = lineW;
+  ctxMain.strokeStyle = '#FF3B30';
+  ctxMain.setLineDash([]);
+
+  // 外框四边也是分割边界，向内收半个线宽保证完整可见。
+  const halfLine = lineW / 2;
+  ctxMain.strokeRect(
+    bLeft + halfLine,
+    bTop + halfLine,
+    Math.max(1, bRight - bLeft - lineW),
+    Math.max(1, bBottom - bTop - lineW)
+  );
+
+  drawEdgeHandle((bLeft + bRight) / 2, Math.max(7, bTop), 'ns');
+  drawEdgeHandle((bLeft + bRight) / 2, Math.min(dH - 7, bBottom), 'ns');
+  drawEdgeHandle(Math.max(7, bLeft), (bTop + bBottom) / 2, 'ew');
+  drawEdgeHandle(Math.min(dW - 7, bRight), (bTop + bBottom) / 2, 'ew');
+
+  // 横线
+  for (let i = 0; i < hLines.length; i++) {
+    const y = Math.round(hLines[i] * displayScale);
+    ctxMain.beginPath();
+    ctxMain.moveTo(bLeft, y);
+    ctxMain.lineTo(bRight, y);
+    ctxMain.stroke();
+
+    ctxMain.fillStyle = '#FF3B30';
+    ctxMain.beginPath();
+    ctxMain.arc(bRight - 10, y, 6, 0, Math.PI * 2);
+    ctxMain.fill();
+    ctxMain.fillStyle = 'white';
+    ctxMain.beginPath();
+    ctxMain.arc(bRight - 10, y, 3, 0, Math.PI * 2);
+    ctxMain.fill();
+  }
+
+  // 竖线
+  for (let j = 0; j < vLines.length; j++) {
+    const x = Math.round(vLines[j] * displayScale);
+    ctxMain.beginPath();
+    ctxMain.moveTo(x, bTop);
+    ctxMain.lineTo(x, bBottom);
+    ctxMain.stroke();
+
+    ctxMain.fillStyle = '#FF3B30';
+    ctxMain.beginPath();
+    ctxMain.arc(x, bBottom - 10, 6, 0, Math.PI * 2);
+    ctxMain.fill();
+    ctxMain.fillStyle = 'white';
+    ctxMain.beginPath();
+    ctxMain.arc(x, bBottom - 10, 3, 0, Math.PI * 2);
+    ctxMain.fill();
+  }
+
+  emptyHint.classList.add('hidden');
+  statusBar.classList.remove('hidden');
+  document.getElementById('cellCount').textContent = rows * cols;
+}
+
+// ── 拖拽 ──
+function drawEdgeHandle(x, y, direction) {
+  ctxMain.save();
+  ctxMain.fillStyle = '#FF3B30';
+  ctxMain.strokeStyle = 'white';
+  ctxMain.lineWidth = 2;
+  ctxMain.beginPath();
+  ctxMain.arc(x, y, 7, 0, Math.PI * 2);
+  ctxMain.fill();
+  ctxMain.stroke();
+
+  ctxMain.strokeStyle = 'white';
+  ctxMain.lineWidth = 1.5;
+  ctxMain.beginPath();
+  if (direction === 'ns') {
+    ctxMain.moveTo(x - 3, y - 1);
+    ctxMain.lineTo(x, y - 4);
+    ctxMain.lineTo(x + 3, y - 1);
+    ctxMain.moveTo(x - 3, y + 1);
+    ctxMain.lineTo(x, y + 4);
+    ctxMain.lineTo(x + 3, y + 1);
+  } else {
+    ctxMain.moveTo(x - 1, y - 3);
+    ctxMain.lineTo(x - 4, y);
+    ctxMain.lineTo(x - 1, y + 3);
+    ctxMain.moveTo(x + 1, y - 3);
+    ctxMain.lineTo(x + 4, y);
+    ctxMain.lineTo(x + 1, y + 3);
+  }
+  ctxMain.stroke();
+  ctxMain.restore();
+}
+
+function getDragBounds(type, index) {
+  const gap = 8;
+  if (type === 'h') {
+    return {
+      minBound: index > 0 ? hLines[index - 1] + gap : gridBounds.top + gap,
+      maxBound: index < hLines.length - 1 ? hLines[index + 1] - gap : gridBounds.bottom - gap
+    };
+  }
+  if (type === 'top') {
+    return {
+      minBound: 0,
+      maxBound: hLines.length ? hLines[0] - gap : gridBounds.bottom - gap
+    };
+  }
+  if (type === 'bottom') {
+    return {
+      minBound: hLines.length ? hLines[hLines.length - 1] + gap : gridBounds.top + gap,
+      maxBound: sourceImage.height
+    };
+  }
+  if (type === 'left') {
+    return {
+      minBound: 0,
+      maxBound: vLines.length ? vLines[0] - gap : gridBounds.right - gap
+    };
+  }
+  if (type === 'right') {
+    return {
+      minBound: vLines.length ? vLines[vLines.length - 1] + gap : gridBounds.left + gap,
+      maxBound: sourceImage.width
+    };
+  }
+  return {
+    minBound: index > 0 ? vLines[index - 1] + gap : gridBounds.left + gap,
+    maxBound: index < vLines.length - 1 ? vLines[index + 1] - gap : gridBounds.right - gap
+  };
+}
+
+function getMousePos(e) {
+  const rect = mainCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const scaleX = mainCanvas.width / rect.width;
+  const scaleY = mainCanvas.height / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX / displayScale,
+    y: (clientY - rect.top) * scaleY / displayScale
+  };
+}
+
+function hitTest(pos) {
+  const threshold = 15 / displayScale;
+  const withinX = pos.x >= gridBounds.left - threshold && pos.x <= gridBounds.right + threshold;
+  const withinY = pos.y >= gridBounds.top - threshold && pos.y <= gridBounds.bottom + threshold;
+
+  if (withinX && Math.abs(pos.y - gridBounds.top) < threshold) return { type: 'top' };
+  if (withinX && Math.abs(pos.y - gridBounds.bottom) < threshold) return { type: 'bottom' };
+  if (withinY && Math.abs(pos.x - gridBounds.left) < threshold) return { type: 'left' };
+  if (withinY && Math.abs(pos.x - gridBounds.right) < threshold) return { type: 'right' };
+
+  for (let i = 0; i < hLines.length; i++) {
+    if (Math.abs(pos.y - hLines[i]) < threshold) return { type: 'h', index: i };
+  }
+  for (let j = 0; j < vLines.length; j++) {
+    if (Math.abs(pos.x - vLines[j]) < threshold) return { type: 'v', index: j };
+  }
+  return null;
+}
+
+function startDrag(hit, pos) {
+  const bounds = getDragBounds(hit.type, hit.index);
+  const startValMap = {
+    h: () => hLines[hit.index],
+    v: () => vLines[hit.index],
+    top: () => gridBounds.top,
+    bottom: () => gridBounds.bottom,
+    left: () => gridBounds.left,
+    right: () => gridBounds.right
+  };
+  dragState = {
+    type: hit.type,
+    index: hit.index,
+    startVal: startValMap[hit.type](),
+    startPos: pos,
+    minBound: bounds.minBound,
+    maxBound: bounds.maxBound
+  };
+}
+
+function moveDrag(pos) {
+  if (!dragState) return;
+  if (dragState.type === 'h' || dragState.type === 'top' || dragState.type === 'bottom') {
+    let newY = dragState.startVal + (pos.y - dragState.startPos.y);
+    newY = Math.max(dragState.minBound, Math.min(dragState.maxBound, newY));
+    if (dragState.type === 'h') hLines[dragState.index] = Math.round(newY);
+    if (dragState.type === 'top') gridBounds.top = Math.round(newY);
+    if (dragState.type === 'bottom') gridBounds.bottom = Math.round(newY);
+  } else {
+    let newX = dragState.startVal + (pos.x - dragState.startPos.x);
+    newX = Math.max(dragState.minBound, Math.min(dragState.maxBound, newX));
+    if (dragState.type === 'v') vLines[dragState.index] = Math.round(newX);
+    if (dragState.type === 'left') gridBounds.left = Math.round(newX);
+    if (dragState.type === 'right') gridBounds.right = Math.round(newX);
+  }
+  render();
+}
+
+function cursorForHit(hit) {
+  if (!hit) return 'default';
+  return (hit.type === 'h' || hit.type === 'top' || hit.type === 'bottom') ? 'ns-resize' : 'ew-resize';
+}
+
+mainCanvas.addEventListener('mousedown', e => {
+  if (!sourceImage) return;
+  const pos = getMousePos(e);
+  const hit = hitTest(pos);
+  if (!hit) return;
+  e.preventDefault();
+  startDrag(hit, pos);
+  mainCanvas.style.cursor = cursorForHit(hit);
+});
+
+mainCanvas.addEventListener('mousemove', e => {
+  if (!sourceImage) return;
+  const pos = getMousePos(e);
+  if (dragState) {
+    e.preventDefault();
+    moveDrag(pos);
+  } else {
+    const hit = hitTest(pos);
+    mainCanvas.style.cursor = cursorForHit(hit);
+  }
+});
+
+mainCanvas.addEventListener('mouseup', () => {
+  dragState = null;
+  mainCanvas.style.cursor = 'default';
+});
+
+mainCanvas.addEventListener('mouseleave', () => {
+  dragState = null;
+});
+
+mainCanvas.addEventListener('touchstart', e => {
+  if (!sourceImage) return;
+  const pos = getMousePos(e);
+  const hit = hitTest(pos);
+  if (!hit) return;
+  e.preventDefault();
+  startDrag(hit, pos);
+}, { passive: false });
+
+mainCanvas.addEventListener('touchmove', e => {
+  if (!dragState || !sourceImage) return;
+  e.preventDefault();
+  moveDrag(getMousePos(e));
+}, { passive: false });
+
+mainCanvas.addEventListener('touchend', () => { dragState = null; });
+
+// ── PNG 导出 ──
+async function doExportPng() {
+  if (!sourceImage) return;
+
+  const rows   = parseInt(gridRows.value) || 1;
+  const cols   = parseInt(gridCols.value) || 1;
+  const margin = parseInt(marginSlider.value) || 0;
+  const names  = parseNames();
+  const total  = rows * cols;
+
+  if (names.length > 0 && names.length !== total) {
+    log(`⚠️ 字符命名数量不匹配！需要 ${total} 个，当前 ${names.length} 个`);
+    return;
+  }
+
+  const allY = [gridBounds.top, ...hLines, gridBounds.bottom];
+  const allX = [gridBounds.left, ...vLines, gridBounds.right];
+
+  overlay.classList.remove('hidden');
+  overlayMsg.textContent = '正在分割 PNG...';
+  const zip = new JSZip();
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      const sx = allX[c] + margin;
+      const sy = allY[r] + margin;
+      const sw = allX[c + 1] - allX[c] - margin * 2;
+      const sh = allY[r + 1] - allY[r] - margin * 2;
+      if (sw <= 0 || sh <= 0) continue;
+
+      const cc = document.createElement('canvas');
+      cc.width = sw; cc.height = sh;
+      cc.getContext('2d').drawImage(cropCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+      const blob = await new Promise(res => cc.toBlob(res, 'image/png'));
+      const filename = (names[i] || String(i + 1).padStart(2, '0')) + '.png';
+      zip.file(filename, blob);
+      overlayProg.textContent = `${i + 1} / ${total}`;
+    }
+  }
+
+  overlayProg.textContent = '正在打包...';
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(zipBlob, `${sourceFileName}_png.zip`);
+  overlay.classList.add('hidden');
+  log(`✓ PNG ZIP 已下载: ${sourceFileName}_png.zip (${total} 个)`);
+}
+
+// ── PNG → SVG 转换（使用 potrace-wasm 的 loadFromCanvas API）──
+async function pngToSvg(canvas, targetWidth) {
+  const ratio = canvas.height / canvas.width;
+  const targetHeight = Math.round(targetWidth * ratio);
+
+  // 等待 WASM 引擎就绪
+  if (window.potraceReady) {
+    await window.potraceReady.catch(function (err) {
+      throw new Error('Potrace WASM 加载失败: ' + err.message);
+    });
+  }
+
+  // potraceFromCanvas 返回完整 SVG 字符串（含 <svg> 标签，坐标为像素尺寸）
+  if (typeof window.potraceFromCanvas !== 'function') {
+    throw new Error('Potrace API 不可用（potraceFromCanvas 未定义）');
+  }
+  const svgRaw = await window.potraceFromCanvas(canvas);
+
+  if (!svgRaw || !svgRaw.trim()) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + targetWidth + '" height="' + targetHeight + '" viewBox="0 0 ' + canvas.width + ' ' + canvas.height + '"></svg>';
+  }
+
+  // 替换 SVG 的 width/height 为目标尺寸，保留原始 viewBox 供精确缩放
+  var svgFixed = svgRaw
+    .replace(/width="[^"]*"/, 'width="' + targetWidth + '"')
+    .replace(/height="[^"]*"/, 'height="' + targetHeight + '"');
+
+  return svgFixed;
+}
+
+// ── SVG 导出 ──
+async function doExportSvg() {
+  if (!sourceImage) return;
+
+  const rows   = parseInt(gridRows.value) || 1;
+  const cols   = parseInt(gridCols.value) || 1;
+  const margin = parseInt(marginSlider.value) || 0;
+  const names  = parseNames();
+  const total  = rows * cols;
+  const TARGET_W = 400;
+
+  if (names.length > 0 && names.length !== total) {
+    log(`⚠️ 字符命名数量不匹配！需要 ${total} 个，当前 ${names.length} 个`);
+    return;
+  }
+
+  const allY = [gridBounds.top, ...hLines, gridBounds.bottom];
+  const allX = [gridBounds.left, ...vLines, gridBounds.right];
+
+  overlay.classList.remove('hidden');
+  overlayMsg.textContent = '正在分割并转换为 SVG...';
+  const zip = new JSZip();
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      const sx = allX[c] + margin;
+      const sy = allY[r] + margin;
+      const sw = allX[c + 1] - allX[c] - margin * 2;
+      const sh = allY[r + 1] - allY[r] - margin * 2;
+      if (sw <= 0 || sh <= 0) continue;
+
+      // 裁切并转 SVG
+      const cc = document.createElement('canvas');
+      cc.width = sw; cc.height = sh;
+      const tctx = cc.getContext('2d');
+      tctx.drawImage(cropCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      // 直接传入 canvas，loadFromCanvas 内部读取 imageData
+      const svgStr = await pngToSvg(cc, TARGET_W);
+      const filename = (names[i] || String(i + 1).padStart(2, '0')) + '.svg';
+      zip.file(filename, svgStr);
+
+      overlayProg.textContent = `${i + 1} / ${total}`;
+    }
+  }
+
+  overlayProg.textContent = '正在打包...';
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  downloadBlob(zipBlob, `${sourceFileName}_svg.zip`);
+  overlay.classList.add('hidden');
+  log(`✓ SVG ZIP 已下载: ${sourceFileName}_svg.zip (${total} 个，宽度 ${TARGET_W})`);
+}
+
+// ── 通用下载 ──
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+</script>
+</body>
+</html>
