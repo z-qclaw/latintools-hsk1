@@ -2,6 +2,9 @@ const MAX_JPG_SIZE = 143360;
 const OPPO_JPG_SIZE = 204800;
 const OPPO_THUMB_SIZE = 51200;
 const DEFAULT_ZOOM = 0.62;
+const UPLOAD_IMAGE_MAX_EDGE = 3000;
+const UPLOAD_IMAGE_TARGET_SIZE = 1572864;
+const UPLOAD_IMAGE_QUALITIES = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.38, 0.3];
 
 const state = {
   fontFamily: "system-ui",
@@ -1420,22 +1423,80 @@ function moveLayerWithGuides(ref, dx, dy, ctx) {
   return guides;
 }
 
-function loadImageFromFile(file) {
+function loadImageElement(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.src = src;
   });
 }
 
+function releaseLoadedImage(image) {
+  const url = image?.dataset?.compressedUrl;
+  if (url) URL.revokeObjectURL(url);
+}
+
+async function loadImageFromFile(file) {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const sourceImage = await loadImageElement(sourceUrl);
+    const compressedBlob = await compressUploadedImage(sourceImage);
+    const compressedUrl = URL.createObjectURL(compressedBlob);
+    try {
+      const image = await loadImageElement(compressedUrl);
+      image.dataset.sourceFileSize = String(file.size || 0);
+      image.dataset.compressedFileSize = String(compressedBlob.size || 0);
+      image.dataset.displayWidth = String(sourceImage.naturalWidth || sourceImage.width);
+      image.dataset.displayHeight = String(sourceImage.naturalHeight || sourceImage.height);
+      image.dataset.compressedUrl = compressedUrl;
+      return image;
+    } catch (error) {
+      URL.revokeObjectURL(compressedUrl);
+      throw error;
+    }
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 function loadImageUrl(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
+  return loadImageElement(url);
+}
+
+function getUploadImageScale(width, height) {
+  const maxEdge = Math.max(width, height);
+  return maxEdge > UPLOAD_IMAGE_MAX_EDGE ? UPLOAD_IMAGE_MAX_EDGE / maxEdge : 1;
+}
+
+function canvasToUploadJpeg(canvas, quality) {
+  return new Promise(resolve => {
+    canvas.toBlob(blob => resolve(blob), "image/jpeg", quality);
   });
+}
+
+async function compressUploadedImage(image) {
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = getUploadImageScale(sourceWidth, sourceHeight);
+  const canvas = makeCanvas(
+    Math.max(1, Math.round(sourceWidth * scale)),
+    Math.max(1, Math.round(sourceHeight * scale))
+  );
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let bestBlob = null;
+  for (const quality of UPLOAD_IMAGE_QUALITIES) {
+    const blob = await canvasToUploadJpeg(canvas, quality);
+    bestBlob = !bestBlob || blob.size < bestBlob.size ? blob : bestBlob;
+    if (blob.size <= UPLOAD_IMAGE_TARGET_SIZE) return blob;
+  }
+  return bestBlob;
 }
 
 async function loadFont(file) {
@@ -1456,8 +1517,8 @@ function getDefaultImagePlacement(template) {
   const fitY = visibleBottom > visibleTop ? visibleTop : 0;
   const fitW = visibleRight > visibleLeft ? visibleRight - visibleLeft : template.width;
   const fitH = visibleBottom > visibleTop ? visibleBottom - visibleTop : template.height;
-  const width = state.image.naturalWidth || state.image.width;
-  const height = state.image.naturalHeight || state.image.height;
+  const width = Number(state.image.dataset?.displayWidth) || state.image.naturalWidth || state.image.width;
+  const height = Number(state.image.dataset?.displayHeight) || state.image.naturalHeight || state.image.height;
   return {
     x: fitX + (fitW - width) / 2,
     y: fitY + (fitH - height) / 2,
@@ -2216,21 +2277,77 @@ function canvasToPng(canvas) {
   });
 }
 
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes)) return "无限制";
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`;
+  return `${Math.ceil(bytes / 1024)} KB`;
+}
+
+function makeDetailReducedCanvas(sourceCanvas, scale) {
+  const scratch = makeCanvas(
+    Math.max(1, Math.round(sourceCanvas.width * scale)),
+    Math.max(1, Math.round(sourceCanvas.height * scale))
+  );
+  const scratchCtx = scratch.getContext("2d");
+  scratchCtx.imageSmoothingEnabled = true;
+  scratchCtx.imageSmoothingQuality = "high";
+  scratchCtx.drawImage(sourceCanvas, 0, 0, scratch.width, scratch.height);
+
+  const output = makeCanvas(sourceCanvas.width, sourceCanvas.height);
+  const outputCtx = output.getContext("2d");
+  outputCtx.imageSmoothingEnabled = true;
+  outputCtx.imageSmoothingQuality = "high";
+  outputCtx.drawImage(scratch, 0, 0, output.width, output.height);
+  return output;
+}
+
+async function canvasToCompressedJpeg(canvas, maxSize) {
+  const qualities = [0.92, 0.86, 0.8, 0.74, 0.68, 0.62, 0.56, 0.5, 0.44, 0.38, 0.32, 0.26, 0.22, 0.18, 0.14, 0.1, 0.07, 0.05];
+  let bestBlob = null;
+
+  for (const quality of qualities) {
+    const blob = await canvasToJpeg(canvas, quality);
+    bestBlob = !bestBlob || blob.size < bestBlob.size ? blob : bestBlob;
+    if (blob.size <= maxSize) return blob;
+  }
+
+  const detailScales = [0.88, 0.76, 0.64, 0.54, 0.46, 0.38, 0.32, 0.26];
+  const fallbackQualities = [0.72, 0.6, 0.48, 0.36, 0.26, 0.18, 0.12, 0.08, 0.05];
+  for (const scale of detailScales) {
+    const reducedCanvas = makeDetailReducedCanvas(canvas, scale);
+    for (const quality of fallbackQualities) {
+      const blob = await canvasToJpeg(reducedCanvas, quality);
+      bestBlob = !bestBlob || blob.size < bestBlob.size ? blob : bestBlob;
+      if (blob.size <= maxSize) return blob;
+    }
+  }
+
+  return bestBlob;
+}
+
+function makeExportSizeError(template, blob) {
+  const error = new Error(`${template.file} 超过大小限制`);
+  error.template = template;
+  error.actualSize = blob?.size || 0;
+  error.maxSize = template.maxSize;
+  return error;
+}
+
 async function exportTemplateBlob(template) {
   const canvas = makeCanvas(template.width, template.height);
   paintTemplate(template, canvas);
   if (template.format === "png") {
-    return canvasToPng(canvas);
+    const blob = await canvasToPng(canvas);
+    if (Number.isFinite(template.maxSize) && blob.size > template.maxSize) {
+      throw makeExportSizeError(template, blob);
+    }
+    return blob;
   }
-  let bestBlob = await canvasToJpeg(canvas, 0.92);
-  if (bestBlob.size <= template.maxSize) return bestBlob;
-
-  for (let quality = 0.86; quality >= 0.22; quality -= 0.04) {
-    const blob = await canvasToJpeg(canvas, quality);
-    bestBlob = blob;
-    if (blob.size <= template.maxSize) return blob;
+  const blob = await canvasToCompressedJpeg(canvas, template.maxSize);
+  if (blob.size > template.maxSize) {
+    throw makeExportSizeError(template, blob);
   }
-  return bestBlob;
+  return blob;
 }
 
 function downloadBlob(blob, filename) {
@@ -2245,8 +2362,12 @@ function downloadBlob(blob, filename) {
 async function downloadSingle(id) {
   const template = templates.find(item => item.id === id);
   if (!template) return;
-  const blob = await exportTemplateBlob(template);
-  downloadBlob(blob, template.file);
+  try {
+    const blob = await exportTemplateBlob(template);
+    downloadBlob(blob, template.file);
+  } catch (error) {
+    alert(`无法导出 ${template.file}\n当前最小体积：${formatBytes(error.actualSize)}\n平台限制：${formatBytes(error.maxSize)}`);
+  }
 }
 
 async function exportZip() {
@@ -2256,22 +2377,43 @@ async function exportZip() {
   }
   dom.exportZip.disabled = true;
   dom.exportZip.textContent = "导出中";
-  const zip = new JSZip();
-  const platformFolderNames = { honor: "荣耀", oppo: "OPPO", vivo: "vivo" };
+  try {
+    const zip = new JSZip();
+    const platformFolderNames = { honor: "荣耀", oppo: "OPPO", vivo: "vivo" };
+    const failures = [];
 
-  for (const platform of ["honor", "oppo", "vivo"]) {
-    const folder = zip.folder(platformFolderNames[platform] || platform);
-    for (const template of getPlatformTemplates(platform)) {
-      const blob = await exportTemplateBlob(template);
-      folder.file(template.file, blob);
+    for (const platform of ["honor", "oppo", "vivo"]) {
+      const folder = zip.folder(platformFolderNames[platform] || platform);
+      for (const template of getPlatformTemplates(platform)) {
+        try {
+          const blob = await exportTemplateBlob(template);
+          folder.file(template.file, blob);
+        } catch (error) {
+          failures.push({
+            folder: platformFolderNames[platform] || platform,
+            file: template.file,
+            actualSize: error.actualSize,
+            maxSize: error.maxSize
+          });
+        }
+      }
     }
-  }
 
-  const zipBlob = await zip.generateAsync({ type: "blob" });
-  const name = fileBaseName(state.fontName || "latin");
-  downloadBlob(zipBlob, `${name}.zip`);
-  dom.exportZip.textContent = "导出三平台 ZIP";
-  dom.exportZip.disabled = false;
+    if (failures.length) {
+      const details = failures
+        .map(item => `${item.folder}/${item.file}: ${formatBytes(item.actualSize)} > ${formatBytes(item.maxSize)}`)
+        .join("\n");
+      alert(`以下图片压缩后仍超过平台限制，已停止导出：\n${details}`);
+      return;
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const name = fileBaseName(state.fontName || "latin");
+    downloadBlob(zipBlob, `${name}.zip`);
+  } finally {
+    dom.exportZip.textContent = "导出三平台 ZIP";
+    dom.exportZip.disabled = !(state.fontLoaded && Boolean(state.image));
+  }
 }
 
 async function loadBaseImages() {
@@ -2306,7 +2448,9 @@ async function handleFontFile(file) {
 async function handleImageFile(file) {
   if (!file) return;
   try {
-    state.image = await loadImageFromFile(file);
+    const nextImage = await loadImageFromFile(file);
+    releaseLoadedImage(state.image);
+    state.image = nextImage;
     state.imagePlacements = {};
     state.imageEditMode = true;
     setUploadFileName(dom.imageFileName, file.name);
@@ -2314,6 +2458,7 @@ async function handleImageFile(file) {
   } catch (error) {
     console.error(error);
     dom.imageFileName.innerHTML = '<span class="error">图片加载失败</span>';
+    releaseLoadedImage(state.image);
     state.image = null;
     renderAll();
   }
