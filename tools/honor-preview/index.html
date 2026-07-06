@@ -4,14 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>拉丁主题商店预览图生成器</title>
-  <link rel="stylesheet" href="style.css?v=20260704-upload-precompress">
+  <link rel="stylesheet" href="style.css?v=20260706-version-changelog">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <a class="back-link" href="../../index.html">返回</a>
       <div>
-        <h1>拉丁主题商店预览图生成器</h1>
+        <div class="title-line">
+          <h1>拉丁主题商店预览图生成器</h1>
+          <span class="version-badge">v20260706</span>
+          <button class="changelog-trigger" id="openChangelog" type="button">更新日志</button>
+        </div>
         <p>以图片画布为中心，拖动底图、文字和气泡，完成多平台预览图输出。</p>
       </div>
     </header>
@@ -200,7 +204,43 @@
     </section>
   </main>
 
+  <dialog class="changelog-dialog" id="changelogDialog" aria-labelledby="changelogTitle">
+    <div class="changelog-panel">
+      <header class="changelog-head">
+        <div>
+          <strong id="changelogTitle">更新日志</strong>
+          <span>当前版本 v20260706</span>
+        </div>
+        <button id="closeChangelog" type="button" aria-label="关闭更新日志">关闭</button>
+      </header>
+      <div class="changelog-body">
+        <section>
+          <h2>20260706</h2>
+          <ul>
+            <li>背景图移动与缩放增加覆盖约束，导出区域不允许露出白边。</li>
+            <li>标题增加版本号与更新日志入口。</li>
+          </ul>
+        </section>
+        <section>
+          <h2>20260704</h2>
+          <ul>
+            <li>图片上传后先进行预压缩，降低后续导出超限风险。</li>
+            <li>导出阶段增加严格压缩与失败清单，超限图片不再静默导出。</li>
+          </ul>
+        </section>
+        <section>
+          <h2>20260703</h2>
+          <ul>
+            <li>ZIP 导出改为同时输出荣耀、OPPO、vivo 三个平台子文件夹。</li>
+            <li>增加画布外背景图显示开关。</li>
+            <li>修正背景图编辑蓝框与实际图片位置偏移问题。</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
   <script src="../../assets/vendor/jszip.min.js"></script>
-  <script src="main.js?v=20260704-upload-precompress"></script>
+  <script src="main.js?v=20260706-version-changelog"></script>
 </body>
 </html>

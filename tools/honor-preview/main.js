@@ -557,6 +557,9 @@ const dom = {
   fontFileName: document.getElementById("fontFileName"),
   imageFileName: document.getElementById("imageFileName"),
   fontName: document.getElementById("fontName"),
+  openChangelog: document.getElementById("openChangelog"),
+  changelogDialog: document.getElementById("changelogDialog"),
+  closeChangelog: document.getElementById("closeChangelog"),
   exportZip: document.getElementById("exportZip"),
   platformTabs: [...document.querySelectorAll("[data-platform-tab]")],
   honorTemplateList: document.getElementById("honorTemplateList"),
@@ -1508,6 +1511,7 @@ async function loadFont(file) {
 }
 
 function getDefaultImagePlacement(template) {
+  const cover = getImageCoverageRect(template);
   const [boxX, boxY, boxW, boxH] = template.imageBox;
   const visibleLeft = Math.max(0, boxX);
   const visibleTop = Math.max(0, boxY);
@@ -1519,12 +1523,12 @@ function getDefaultImagePlacement(template) {
   const fitH = visibleBottom > visibleTop ? visibleBottom - visibleTop : template.height;
   const width = Number(state.image.dataset?.displayWidth) || state.image.naturalWidth || state.image.width;
   const height = Number(state.image.dataset?.displayHeight) || state.image.naturalHeight || state.image.height;
-  return {
+  return constrainImagePlacementToCoverage(template, {
     x: fitX + (fitW - width) / 2,
     y: fitY + (fitH - height) / 2,
     width,
     height
-  };
+  }, cover);
 }
 
 function getImagePlacement(template) {
@@ -1532,16 +1536,69 @@ function getImagePlacement(template) {
   if (!state.imagePlacements[template.id]) {
     state.imagePlacements[template.id] = getDefaultImagePlacement(template);
   }
+  state.imagePlacements[template.id] = constrainImagePlacementToCoverage(template, state.imagePlacements[template.id]);
   return state.imagePlacements[template.id];
 }
 
-function setImagePlacement(template, placement) {
-  state.imagePlacements[template.id] = {
-    x: placement.x,
-    y: placement.y,
-    width: Math.max(1, placement.width),
-    height: Math.max(1, placement.height)
+function getImageCoverageRect(template) {
+  if (!template.imageBox) {
+    return {
+      left: 0,
+      top: 0,
+      right: template.width,
+      bottom: template.height,
+      width: template.width,
+      height: template.height
+    };
+  }
+  const [boxX, boxY, boxW, boxH] = template.imageBox;
+  const left = Math.max(0, boxX);
+  const top = Math.max(0, boxY);
+  const right = Math.min(template.width, boxX + boxW);
+  const bottom = Math.min(template.height, boxY + boxH);
+  if (right <= left || bottom <= top) {
+    return {
+      left: 0,
+      top: 0,
+      right: template.width,
+      bottom: template.height,
+      width: template.width,
+      height: template.height
+    };
+  }
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top
   };
+}
+
+function constrainImagePlacementToCoverage(template, placement, cover = getImageCoverageRect(template)) {
+  let width = Math.max(1, placement.width);
+  let height = Math.max(1, placement.height);
+  let x = placement.x;
+  let y = placement.y;
+  const scale = Math.max(1, cover.width / width, cover.height / height);
+
+  if (scale > 1) {
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    width *= scale;
+    height *= scale;
+    x = centerX - width / 2;
+    y = centerY - height / 2;
+  }
+
+  x = Math.min(cover.left, Math.max(cover.right - width, x));
+  y = Math.min(cover.top, Math.max(cover.bottom - height, y));
+  return { x, y, width, height };
+}
+
+function setImagePlacement(template, placement) {
+  state.imagePlacements[template.id] = constrainImagePlacementToCoverage(template, placement);
 }
 
 function moveImagePlacement(template, dx, dy) {
@@ -2486,6 +2543,22 @@ function bindUploadDrop(input, handler) {
 }
 
 function bindEvents() {
+  dom.openChangelog?.addEventListener("click", () => {
+    if (typeof dom.changelogDialog?.showModal === "function") {
+      dom.changelogDialog.showModal();
+    }
+  });
+
+  dom.closeChangelog?.addEventListener("click", () => {
+    dom.changelogDialog?.close();
+  });
+
+  dom.changelogDialog?.addEventListener("click", event => {
+    if (event.target === dom.changelogDialog) {
+      dom.changelogDialog.close();
+    }
+  });
+
   dom.platformTabs.forEach(button => {
     button.addEventListener("click", () => {
       const platform = button.dataset.platformTab;

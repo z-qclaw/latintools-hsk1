@@ -113,6 +113,118 @@ h1 {
   white-space: nowrap;
 }
 
+.title-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.changelog-trigger {
+  height: 26px;
+  padding: 0 9px;
+  border-color: rgba(23, 107, 255, 0.28);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.changelog-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+}
+
+.changelog-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.32);
+}
+
+.changelog-panel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.changelog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-soft);
+}
+
+.changelog-head div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.changelog-head strong {
+  font-size: 16px;
+}
+
+.changelog-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.changelog-head button {
+  height: 30px;
+  flex: 0 0 auto;
+}
+
+.changelog-body {
+  max-height: min(520px, calc(100vh - 180px));
+  overflow: auto;
+  padding: 14px 16px 16px;
+}
+
+.changelog-body section + section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.changelog-body h2 {
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.changelog-body ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 p {
   margin: 2px 0 0;
   color: var(--muted);
