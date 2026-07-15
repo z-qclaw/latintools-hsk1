@@ -79,16 +79,20 @@ button.primary {
   margin: 0 auto;
   padding: 10px 0 12px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
 }
 
 .topbar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: auto minmax(250px, 1fr) auto auto;
+  gap: 8px;
   align-items: center;
-  min-height: 42px;
+  min-height: 46px;
+}
+
+.app-title {
+  min-width: 0;
 }
 
 .back-link {
@@ -246,7 +250,7 @@ p {
 
 .setup-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(168px, 190px));
+  grid-template-columns: repeat(2, minmax(132px, 160px));
   gap: 6px;
 }
 
@@ -322,7 +326,7 @@ p {
 .setup-export {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
   min-height: 46px;
 }

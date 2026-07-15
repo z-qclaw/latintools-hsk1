@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>拉丁主题商店预览图生成器</title>
-  <link rel="stylesheet" href="style.css?v=20260715-inspector-density-compact">
+  <link rel="stylesheet" href="style.css?v=20260715-topbar-compact">
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <a class="back-link" href="../../index.html">返回</a>
-      <div>
+      <div class="app-title">
         <div class="title-line">
           <h1>拉丁主题商店预览图生成器</h1>
           <span class="version-badge">v20260715</span>
@@ -18,9 +18,6 @@
         </div>
         <p>以图片画布为中心，拖动底图、文字和气泡，完成多平台预览图输出。</p>
       </div>
-    </header>
-
-    <section class="setup-panel" aria-label="项目设置">
       <div class="setup-grid">
         <label class="upload-tile">
           <span class="label">字体</span>
@@ -41,7 +38,7 @@
         <button id="exportVivoConfig" type="button">vivo 参数</button>
         <button class="primary" id="exportZip" disabled>导出三平台 ZIP</button>
       </div>
-    </section>
+    </header>
 
     <section class="editor-shell" aria-label="单图编辑">
       <aside class="layer-panel">
