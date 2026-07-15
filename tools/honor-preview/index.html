@@ -180,6 +180,10 @@
                   <span id="layerLineHeightLabel">行距</span>
                   <input id="layerLineHeight" type="number" step="1" min="0">
                 </label>
+                <label id="layerTrackingField" class="is-hidden">
+                  <span>字间距</span>
+                  <input id="layerTracking" type="number" step="1" min="0" max="100">
+                </label>
                 <label>
                   <span>垂直居中</span>
                   <input id="layerVerticalCenter" type="checkbox" checked>
@@ -219,6 +223,7 @@
           <ul>
             <li>预览文字渲染支持字体字偶距；保留字间距设置，并优先使用 Canvas 原生字间距能力。</li>
             <li>视图缩放最小值由 25% 调整为 10%。</li>
+            <li>荣耀与 vivo 的 preview_fonts_0.jpg 改为不使用字偶距，可单独设置 0–100 的字间距，默认 20。</li>
           </ul>
         </section>
         <section>
@@ -248,6 +253,6 @@
   </dialog>
 
   <script src="../../assets/vendor/jszip.min.js"></script>
-  <script src="main.js?v=20260715-kerning-zoom"></script>
+  <script src="main.js?v=20260715-honor-vivo-tracking"></script>
 </body>
 </html>

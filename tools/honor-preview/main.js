@@ -489,6 +489,20 @@ templates.forEach(template => {
   }
 });
 
+function usesManualLetterSpacing(template) {
+  return template.platform === "honor" && template.id === "preview_fonts_0"
+    || template.platform === "vivo" && template.id === "vivo_preview_fonts_0";
+}
+
+templates.forEach(template => {
+  if (usesManualLetterSpacing(template)) {
+    template.layers.forEach(layer => {
+      layer.tracking = 20;
+      layer.disableKerning = true;
+    });
+  }
+});
+
 templates.forEach(template => {
   template.layers.forEach(layer => {
     layer.autoFit = false;
@@ -600,6 +614,8 @@ const dom = {
   layerSize: document.getElementById("layerSize"),
   layerLineHeightLabel: document.getElementById("layerLineHeightLabel"),
   layerLineHeight: document.getElementById("layerLineHeight"),
+  layerTrackingField: document.getElementById("layerTrackingField"),
+  layerTracking: document.getElementById("layerTracking"),
   layerVerticalCenter: document.getElementById("layerVerticalCenter"),
   layerTextAlign: document.getElementById("layerTextAlign"),
   layerTextAlignButtons: [...document.querySelectorAll("[data-text-align]")],
@@ -1139,7 +1155,7 @@ function getBoxAnchors(bounds) {
   };
 }
 
-function getTrackedTextMetrics(ctx, text, tracking, size) {
+function getTrackedTextMetrics(ctx, text, tracking, size, disableKerning = false) {
   if (!text) {
     const fallback = ctx.measureText("M");
     const ascent = fallback.actualBoundingBoxAscent || size * 0.82;
@@ -1157,7 +1173,7 @@ function getTrackedTextMetrics(ctx, text, tracking, size) {
   // Measure the complete string whenever Canvas supports native letter spacing.
   // Unlike measuring/drawing one glyph at a time, this keeps the font's kerning
   // (and ligatures) intact.
-  if (supportsCanvasLetterSpacing(ctx)) {
+  if (!disableKerning && supportsCanvasLetterSpacing(ctx)) {
     const metrics = measureTextWithTracking(ctx, text, tracking);
     const advance = metrics.width;
     const inkLeftOffset = -(metrics.actualBoundingBoxLeft || 0);
@@ -1178,22 +1194,26 @@ function getTrackedTextMetrics(ctx, text, tracking, size) {
   let descent = 0;
   const chars = Array.from(text);
 
+  let cursor = 0;
   chars.forEach((char, index) => {
     const metrics = ctx.measureText(char);
     const charWidth = metrics.width;
-    // The cumulative advance retains pair kerning even in browsers that lack
-    // Canvas letterSpacing. Individual glyph drawing cannot retain ligatures.
-    const cursor = ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
-    const charLeft = cursor - (metrics.actualBoundingBoxLeft || 0);
-    const charRight = cursor + (metrics.actualBoundingBoxRight || charWidth);
+    const advance = disableKerning
+      ? cursor
+      : ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
+    const charLeft = advance - (metrics.actualBoundingBoxLeft || 0);
+    const charRight = advance + (metrics.actualBoundingBoxRight || charWidth);
     inkLeft = Math.min(inkLeft, charLeft);
     inkRight = Math.max(inkRight, charRight);
     ascent = Math.max(ascent, metrics.actualBoundingBoxAscent || size * 0.82);
     descent = Math.max(descent, metrics.actualBoundingBoxDescent || size * 0.22);
+    cursor = advance + charWidth + (index === chars.length - 1 ? 0 : tracking);
   });
 
   return {
-    advance: ctx.measureText(text).width + Math.max(0, chars.length - 1) * tracking,
+    advance: disableKerning
+      ? cursor
+      : ctx.measureText(text).width + Math.max(0, chars.length - 1) * tracking,
     inkLeftOffset: inkLeft,
     inkRightOffset: inkRight,
     inkWidth: Math.max(0, inkRight - inkLeft),
@@ -1208,10 +1228,10 @@ function measureLayerText(ctx, layer, size) {
   const tracking = (layer.tracking || 0) * scale;
   const lineHeight = (layer.lineHeight || layer.size * 1.18) * scale;
 
-  setFont(ctx, size);
+  setFont(ctx, size, layer);
 
   const measuredLines = lines.map(line => {
-    const textMetrics = getTrackedTextMetrics(ctx, line, tracking, size);
+    const textMetrics = getTrackedTextMetrics(ctx, line, tracking, size, layer.disableKerning === true);
     return {
       line,
       width: textMetrics.advance,
@@ -1666,11 +1686,11 @@ function drawCoverImage(ctx, template) {
   ctx.drawImage(state.image, placement.x, placement.y, placement.width, placement.height);
 }
 
-function setFont(ctx, size) {
+function setFont(ctx, size, layer = null) {
   ctx.font = `${size}px "${state.fontFamily}", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
   // `auto` leaves the decision to the browser; request the font's kerning data
   // explicitly when the Canvas implementation exposes this control.
-  if (typeof ctx.fontKerning === "string") ctx.fontKerning = "normal";
+  if (typeof ctx.fontKerning === "string") ctx.fontKerning = layer?.disableKerning ? "none" : "normal";
 }
 
 function supportsCanvasLetterSpacing(ctx) {
@@ -1690,7 +1710,7 @@ function measureTextWithTracking(ctx, text, tracking) {
 
 function drawTrackedText(ctx, text, x, y, tracking, layer) {
   // A single draw call lets Canvas apply the font's GPOS kerning and ligatures.
-  if (!layer?.charColors && supportsCanvasLetterSpacing(ctx)) {
+  if (!layer?.charColors && !layer?.disableKerning && supportsCanvasLetterSpacing(ctx)) {
     const previousLetterSpacing = ctx.letterSpacing;
     ctx.letterSpacing = `${tracking}px`;
     try {
@@ -1702,10 +1722,16 @@ function drawTrackedText(ctx, text, x, y, tracking, layer) {
   }
 
   const chars = Array.from(text);
+  let cursor = x;
   chars.forEach((char, index) => {
     ctx.fillStyle = layer?.charColors?.[char] || layer?.color || ctx.fillStyle;
-    const cursor = x + ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
+    if (!layer?.disableKerning) {
+      cursor = x + ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
+    }
     ctx.fillText(char, cursor, y);
+    if (layer?.disableKerning) {
+      cursor += ctx.measureText(char).width + (index === chars.length - 1 ? 0 : tracking);
+    }
   });
 }
 
@@ -1716,7 +1742,7 @@ function getLayerText(layer) {
 function drawTextLayer(ctx, layer) {
   const metrics = getLayerRenderMetrics(ctx, layer);
 
-  setFont(ctx, metrics.size);
+  setFont(ctx, metrics.size, layer);
   ctx.fillStyle = layer.color;
   ctx.textBaseline = "alphabetic";
 
@@ -2236,6 +2262,7 @@ function setLayerInspectorDisabled(disabled) {
     dom.layerY,
     dom.layerSize,
     dom.layerLineHeight,
+    dom.layerTracking,
     dom.layerColor
   ].forEach(input => {
     input.disabled = disabled;
@@ -2254,6 +2281,8 @@ function renderEmptyLayerControls() {
   dom.layerY.value = "";
   dom.layerSize.value = "";
   dom.layerLineHeight.value = "";
+  dom.layerTracking.value = "";
+  dom.layerTrackingField.classList.add("is-hidden");
   dom.layerColor.value = "#000000";
   dom.layerVerticalCenter.checked = false;
   setLayerInspectorDisabled(true);
@@ -2280,6 +2309,8 @@ function renderLayerControls() {
     dom.layerLineHeightLabel.textContent = "高";
     dom.layerSize.value = Math.round(layer.box[2] - layer.box[0]);
     dom.layerLineHeight.value = Math.round(layer.box[3] - layer.box[1]);
+    dom.layerTracking.value = "";
+    dom.layerTrackingField.classList.add("is-hidden");
     dom.layerVerticalCenter.checked = false;
     dom.layerVerticalCenter.disabled = true;
     renderTextAlignControl();
@@ -2298,6 +2329,9 @@ function renderLayerControls() {
   dom.layerLineHeightLabel.textContent = "行距";
   dom.layerSize.value = Math.round(layer.size);
   dom.layerLineHeight.value = layer.lineHeight ? Math.round(layer.lineHeight) : "";
+  const showTrackingControl = layer.disableKerning === true;
+  dom.layerTrackingField.classList.toggle("is-hidden", !showTrackingControl);
+  dom.layerTracking.value = showTrackingControl ? layer.tracking ?? 20 : "";
   dom.layerVerticalCenter.checked = getTextLayerVerticalAlign(layer) === "center";
   dom.layerVerticalCenter.disabled = false;
   renderTextAlignControl(layer);
@@ -2675,6 +2709,14 @@ function bindEvents() {
     } else {
       delete ref.layer.lineHeight;
     }
+    renderAll();
+  });
+
+  dom.layerTracking.addEventListener("input", () => {
+    const ref = getLayerRef();
+    if (!ref || ref.type !== "text" || ref.layer.disableKerning !== true) return;
+    const value = Number(dom.layerTracking.value);
+    ref.layer.tracking = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 20;
     renderAll();
   });
 
