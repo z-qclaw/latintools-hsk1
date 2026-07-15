@@ -216,7 +216,7 @@
           <ul>
             <li>预览文字渲染支持字体字偶距；保留字间距设置，并优先使用 Canvas 原生字间距能力。</li>
             <li>视图缩放最小值由 25% 调整为 10%。</li>
-            <li>荣耀与 vivo 的 preview_fonts_0.jpg 改为不使用字偶距，可单独设置 0–100 的字间距，默认 0。操作：切换到对应预览图后，点选画布中的任一文字，右侧“图层属性”会显示“字间距”。</li>
+            <li>荣耀与 vivo 的 preview_fonts_0.jpg 保留 TTF 原始字距和字偶距；可额外设置 0–100 的字间距，默认 0。操作：切换到对应预览图后，点选画布中的任一文字，右侧“图层属性”会显示“字间距”。</li>
           </ul>
         </section>
         <section>
@@ -246,6 +246,6 @@
   </dialog>
 
   <script src="../../assets/vendor/jszip.min.js"></script>
-  <script src="main.js?v=20260715-unified-view"></script>
+  <script src="main.js?v=20260715-font-native-spacing"></script>
 </body>
 </html>

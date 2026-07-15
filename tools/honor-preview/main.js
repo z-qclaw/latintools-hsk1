@@ -498,7 +498,8 @@ templates.forEach(template => {
   if (usesManualLetterSpacing(template)) {
     template.layers.forEach(layer => {
       layer.tracking = 0;
-      layer.disableKerning = true;
+      layer.trackingEditable = true;
+      delete layer.disableKerning;
     });
   }
 });
@@ -2329,7 +2330,7 @@ function renderLayerControls() {
   dom.layerLineHeightLabel.textContent = "行距";
   dom.layerSize.value = Math.round(layer.size);
   dom.layerLineHeight.value = layer.lineHeight ? Math.round(layer.lineHeight) : "";
-  const showTrackingControl = layer.disableKerning === true;
+  const showTrackingControl = layer.trackingEditable === true;
   dom.layerTrackingField.classList.toggle("is-hidden", !showTrackingControl);
   dom.layerTracking.value = showTrackingControl ? layer.tracking ?? 0 : "";
   dom.layerVerticalCenter.checked = getTextLayerVerticalAlign(layer) === "center";
@@ -2714,7 +2715,7 @@ function bindEvents() {
 
   dom.layerTracking.addEventListener("input", () => {
     const ref = getLayerRef();
-    if (!ref || ref.type !== "text" || ref.layer.disableKerning !== true) return;
+    if (!ref || ref.type !== "text" || ref.layer.trackingEditable !== true) return;
     const value = Number(dom.layerTracking.value);
     ref.layer.tracking = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
     renderAll();
