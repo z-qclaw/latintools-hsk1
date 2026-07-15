@@ -650,8 +650,8 @@ p {
 
 .param-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
   align-items: stretch;
   min-width: 0;
   padding: 12px;
