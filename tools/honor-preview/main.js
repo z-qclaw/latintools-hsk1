@@ -1154,7 +1154,24 @@ function getTrackedTextMetrics(ctx, text, tracking, size) {
     };
   }
 
-  let cursor = 0;
+  // Measure the complete string whenever Canvas supports native letter spacing.
+  // Unlike measuring/drawing one glyph at a time, this keeps the font's kerning
+  // (and ligatures) intact.
+  if (supportsCanvasLetterSpacing(ctx)) {
+    const metrics = measureTextWithTracking(ctx, text, tracking);
+    const advance = metrics.width;
+    const inkLeftOffset = -(metrics.actualBoundingBoxLeft || 0);
+    const inkRightOffset = metrics.actualBoundingBoxRight || advance;
+    return {
+      advance,
+      inkLeftOffset,
+      inkRightOffset,
+      inkWidth: Math.max(0, inkRightOffset - inkLeftOffset),
+      ascent: metrics.actualBoundingBoxAscent || size * 0.82,
+      descent: metrics.actualBoundingBoxDescent || size * 0.22
+    };
+  }
+
   let inkLeft = Infinity;
   let inkRight = -Infinity;
   let ascent = 0;
@@ -1164,17 +1181,19 @@ function getTrackedTextMetrics(ctx, text, tracking, size) {
   chars.forEach((char, index) => {
     const metrics = ctx.measureText(char);
     const charWidth = metrics.width;
+    // The cumulative advance retains pair kerning even in browsers that lack
+    // Canvas letterSpacing. Individual glyph drawing cannot retain ligatures.
+    const cursor = ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
     const charLeft = cursor - (metrics.actualBoundingBoxLeft || 0);
     const charRight = cursor + (metrics.actualBoundingBoxRight || charWidth);
     inkLeft = Math.min(inkLeft, charLeft);
     inkRight = Math.max(inkRight, charRight);
     ascent = Math.max(ascent, metrics.actualBoundingBoxAscent || size * 0.82);
     descent = Math.max(descent, metrics.actualBoundingBoxDescent || size * 0.22);
-    cursor += charWidth + (index === chars.length - 1 ? 0 : tracking);
   });
 
   return {
-    advance: cursor,
+    advance: ctx.measureText(text).width + Math.max(0, chars.length - 1) * tracking,
     inkLeftOffset: inkLeft,
     inkRightOffset: inkRight,
     inkWidth: Math.max(0, inkRight - inkLeft),
@@ -1649,24 +1668,45 @@ function drawCoverImage(ctx, template) {
 
 function setFont(ctx, size) {
   ctx.font = `${size}px "${state.fontFamily}", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif`;
+  // `auto` leaves the decision to the browser; request the font's kerning data
+  // explicitly when the Canvas implementation exposes this control.
+  if (typeof ctx.fontKerning === "string") ctx.fontKerning = "normal";
 }
 
-function measureTrackedText(ctx, text, tracking) {
-  if (!text) return 0;
-  let width = 0;
-  for (const char of text) {
-    width += ctx.measureText(char).width;
+function supportsCanvasLetterSpacing(ctx) {
+  return typeof ctx.letterSpacing === "string";
+}
+
+function measureTextWithTracking(ctx, text, tracking) {
+  if (!tracking || !supportsCanvasLetterSpacing(ctx)) return ctx.measureText(text);
+  const previousLetterSpacing = ctx.letterSpacing;
+  ctx.letterSpacing = `${tracking}px`;
+  try {
+    return ctx.measureText(text);
+  } finally {
+    ctx.letterSpacing = previousLetterSpacing;
   }
-  return width + Math.max(0, Array.from(text).length - 1) * tracking;
 }
 
 function drawTrackedText(ctx, text, x, y, tracking, layer) {
-  let cursor = x;
-  for (const char of text) {
-    ctx.fillStyle = layer?.charColors?.[char] || layer?.color || ctx.fillStyle;
-    ctx.fillText(char, cursor, y);
-    cursor += ctx.measureText(char).width + tracking;
+  // A single draw call lets Canvas apply the font's GPOS kerning and ligatures.
+  if (!layer?.charColors && supportsCanvasLetterSpacing(ctx)) {
+    const previousLetterSpacing = ctx.letterSpacing;
+    ctx.letterSpacing = `${tracking}px`;
+    try {
+      ctx.fillText(text, x, y);
+    } finally {
+      ctx.letterSpacing = previousLetterSpacing;
+    }
+    return;
   }
+
+  const chars = Array.from(text);
+  chars.forEach((char, index) => {
+    ctx.fillStyle = layer?.charColors?.[char] || layer?.color || ctx.fillStyle;
+    const cursor = x + ctx.measureText(chars.slice(0, index).join("")).width + index * tracking;
+    ctx.fillText(char, cursor, y);
+  });
 }
 
 function getLayerText(layer) {

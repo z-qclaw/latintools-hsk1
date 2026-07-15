@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>拉丁主题商店预览图生成器</title>
-  <link rel="stylesheet" href="style.css?v=20260706-version-changelog">
+  <link rel="stylesheet" href="style.css?v=20260715-kerning-zoom">
 </head>
 <body>
   <main class="app">
@@ -13,7 +13,7 @@
       <div>
         <div class="title-line">
           <h1>拉丁主题商店预览图生成器</h1>
-          <span class="version-badge">v20260706</span>
+          <span class="version-badge">v20260715</span>
           <button class="changelog-trigger" id="openChangelog" type="button">更新日志</button>
         </div>
         <p>以图片画布为中心，拖动底图、文字和气泡，完成多平台预览图输出。</p>
@@ -98,7 +98,7 @@
             </label>
             <label class="zoom-control">
               <span>视图</span>
-              <input id="zoomRange" type="range" min="25" max="120" value="62">
+              <input id="zoomRange" type="range" min="10" max="120" value="62">
               <strong id="zoomValue">62%</strong>
             </label>
             <button id="downloadCurrent" disabled>下载本张 JPG</button>
@@ -209,11 +209,18 @@
       <header class="changelog-head">
         <div>
           <strong id="changelogTitle">更新日志</strong>
-          <span>当前版本 v20260706</span>
+          <span>当前版本 v20260715</span>
         </div>
         <button id="closeChangelog" type="button" aria-label="关闭更新日志">关闭</button>
       </header>
       <div class="changelog-body">
+        <section>
+          <h2>20260715</h2>
+          <ul>
+            <li>预览文字渲染支持字体字偶距；保留字间距设置，并优先使用 Canvas 原生字间距能力。</li>
+            <li>视图缩放最小值由 25% 调整为 10%。</li>
+          </ul>
+        </section>
         <section>
           <h2>20260706</h2>
           <ul>
@@ -241,6 +248,6 @@
   </dialog>
 
   <script src="../../assets/vendor/jszip.min.js"></script>
-  <script src="main.js?v=20260706-version-changelog"></script>
+  <script src="main.js?v=20260715-kerning-zoom"></script>
 </body>
 </html>
