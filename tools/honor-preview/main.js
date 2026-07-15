@@ -497,7 +497,7 @@ function usesManualLetterSpacing(template) {
 templates.forEach(template => {
   if (usesManualLetterSpacing(template)) {
     template.layers.forEach(layer => {
-      layer.tracking = 20;
+      layer.tracking = 0;
       layer.disableKerning = true;
     });
   }
@@ -2331,7 +2331,7 @@ function renderLayerControls() {
   dom.layerLineHeight.value = layer.lineHeight ? Math.round(layer.lineHeight) : "";
   const showTrackingControl = layer.disableKerning === true;
   dom.layerTrackingField.classList.toggle("is-hidden", !showTrackingControl);
-  dom.layerTracking.value = showTrackingControl ? layer.tracking ?? 20 : "";
+  dom.layerTracking.value = showTrackingControl ? layer.tracking ?? 0 : "";
   dom.layerVerticalCenter.checked = getTextLayerVerticalAlign(layer) === "center";
   dom.layerVerticalCenter.disabled = false;
   renderTextAlignControl(layer);
@@ -2716,7 +2716,7 @@ function bindEvents() {
     const ref = getLayerRef();
     if (!ref || ref.type !== "text" || ref.layer.disableKerning !== true) return;
     const value = Number(dom.layerTracking.value);
-    ref.layer.tracking = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 20;
+    ref.layer.tracking = Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
     renderAll();
   });
 
