@@ -2,8 +2,6 @@ const MAX_JPG_SIZE = 143360;
 const OPPO_JPG_SIZE = 204800;
 const OPPO_THUMB_SIZE = 51200;
 const DEFAULT_ZOOM = 0.62;
-const MIN_ZOOM = 0.1;
-const MAX_ZOOM = 1.2;
 const UPLOAD_IMAGE_MAX_EDGE = 3000;
 const UPLOAD_IMAGE_TARGET_SIZE = 1572864;
 const UPLOAD_IMAGE_QUALITIES = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.38, 0.3];
@@ -638,22 +636,6 @@ const dom = {
 
 function getActiveTemplate() {
   return templates.find(template => template.id === state.activeTemplateId) || templates[0];
-}
-
-function fitActiveTemplateToViewport() {
-  const template = getActiveTemplate();
-  const stage = dom.canvasStage;
-  if (!template || !stage) return;
-
-  const styles = getComputedStyle(stage);
-  const horizontalPadding = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
-  const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-  const availableWidth = stage.clientWidth - horizontalPadding - 16;
-  const availableHeight = stage.clientHeight - verticalPadding - 16;
-  const fitZoom = Math.min(availableWidth / template.width, availableHeight / template.height);
-
-  if (!Number.isFinite(fitZoom)) return;
-  state.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.floor(fitZoom * 100) / 100));
 }
 
 function makeLayerKey(templateId, index) {
@@ -2102,7 +2084,6 @@ function renderPlatformTemplateList(platform, listElement, countElement) {
       state.activePlatformId = platform;
       state.activeLayerKey = null;
       state.guides = [];
-      fitActiveTemplateToViewport();
       renderAll();
     });
   });
@@ -2662,7 +2643,6 @@ function bindEvents() {
       }
       state.activeLayerKey = null;
       state.guides = [];
-      fitActiveTemplateToViewport();
       renderAll();
     });
   });
@@ -2954,7 +2934,6 @@ async function boot() {
   await loadBaseImages();
   await loadReferenceImages();
   rebuildAllTextAutoFitGroups();
-  fitActiveTemplateToViewport();
   renderAll();
 }
 
