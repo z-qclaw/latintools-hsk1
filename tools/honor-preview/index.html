@@ -13,7 +13,7 @@
       <div class="app-title">
         <div class="title-line">
           <h1>拉丁主题商店预览图生成器</h1>
-          <span class="version-badge">v20260715</span>
+          <span class="version-badge">v20260728</span>
           <button class="changelog-trigger" id="openChangelog" type="button">更新日志</button>
         </div>
         <p>以图片画布为中心，拖动底图、文字和气泡，完成多平台预览图输出。</p>
@@ -206,16 +206,25 @@
       <header class="changelog-head">
         <div>
           <strong id="changelogTitle">更新日志</strong>
-          <span>当前版本 v20260715</span>
+          <span>当前版本 v20260728</span>
         </div>
         <button id="closeChangelog" type="button" aria-label="关闭更新日志">关闭</button>
       </header>
       <div class="changelog-body">
         <section>
+          <h2>20260728</h2>
+          <ul>
+            <li>导出 JPG 改用 MozJPEG WebAssembly，并自动估算平台体积限制内的较高质量。</li>
+            <li>压缩在独立 Worker 中运行；编码器不可用时自动回退到浏览器原生 JPEG 导出。</li>
+            <li>优先保持原始画布细节，仅在最低质量仍超限时才进行有限降采样。</li>
+          </ul>
+        </section>
+        <section>
           <h2>20260715</h2>
           <ul>
             <li>预览文字渲染支持字体字偶距；保留字间距设置，并优先使用 Canvas 原生字间距能力。</li>
             <li>视图缩放最小值由 25% 调整为 10%。</li>
+            <li>所有支持上传底图的模板均可使用蒙版；未上传图片时会提示先上传图片。</li>
             <li>荣耀与 vivo 的 preview_fonts_0.jpg 保留 TTF 原始字距和字偶距；可额外设置 0–100 的字间距，默认 0。操作：切换到对应预览图后，点选画布中的任一文字，右侧“图层属性”会显示“字间距”。</li>
           </ul>
         </section>
@@ -246,6 +255,6 @@
   </dialog>
 
   <script src="../../assets/vendor/jszip.min.js"></script>
-  <script src="main.js?v=20260715-font-native-spacing"></script>
+  <script src="main.js?v=20260728-mozjpeg"></script>
 </body>
 </html>

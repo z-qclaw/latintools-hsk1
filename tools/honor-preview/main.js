@@ -5,6 +5,11 @@ const DEFAULT_ZOOM = 0.62;
 const UPLOAD_IMAGE_MAX_EDGE = 3000;
 const UPLOAD_IMAGE_TARGET_SIZE = 1572864;
 const UPLOAD_IMAGE_QUALITIES = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46, 0.38, 0.3];
+const MOZJPEG_WORKER_URL = "mozjpeg-worker.js?v=20260728";
+
+let mozJpegWorker = null;
+let mozJpegRequestId = 0;
+const mozJpegRequests = new Map();
 
 const state = {
   fontFamily: "system-ui",
@@ -1656,7 +1661,10 @@ function getMask() {
 }
 
 function canUseMask(template) {
-  return Boolean(template.supportsMask && template.imageBox && state.image);
+  // Any template that accepts an uploaded cover image can receive a mask.
+  // `supportsMask` used to be a per-template whitelist, which left otherwise
+  // editable image templates (such as OPPO detail) unavailable.
+  return Boolean(template.imageBox && state.image);
 }
 
 function drawMask(ctx, template) {
@@ -2365,7 +2373,11 @@ function renderActiveCanvas() {
   dom.maskControl.classList.toggle("is-disabled", !maskEnabled);
   dom.maskOpacity.disabled = !maskEnabled;
   dom.maskOpacity.value = Math.round(mask.opacity * 100);
-  dom.maskOpacityValue.textContent = maskEnabled ? `${Math.round(mask.opacity * 100)}%` : "不适用";
+  dom.maskOpacityValue.textContent = maskEnabled
+    ? `${Math.round(mask.opacity * 100)}%`
+    : template.imageBox
+      ? "请先上传图片"
+      : "不适用";
   dom.maskControl.querySelectorAll("[data-mask-color]").forEach(button => {
     button.disabled = !maskEnabled;
     button.classList.toggle("is-active", button.dataset.maskColor === mask.color);
@@ -2409,6 +2421,55 @@ function canvasToPng(canvas) {
   });
 }
 
+function rejectMozJpegRequests(error) {
+  mozJpegRequests.forEach(({ reject }) => reject(error));
+  mozJpegRequests.clear();
+}
+
+function getMozJpegWorker() {
+  if (mozJpegWorker) return mozJpegWorker;
+  const worker = new Worker(MOZJPEG_WORKER_URL, { type: "module" });
+  worker.addEventListener("message", event => {
+    const request = mozJpegRequests.get(event.data.id);
+    if (!request) return;
+    mozJpegRequests.delete(event.data.id);
+    if (event.data.ok) {
+      request.resolve(event.data);
+    } else {
+      request.reject(new Error(event.data.error || "MozJPEG 编码失败"));
+    }
+  });
+  worker.addEventListener("error", event => {
+    const error = new Error(event.message || "MozJPEG Worker 加载失败");
+    rejectMozJpegRequests(error);
+    worker.terminate();
+    if (mozJpegWorker === worker) mozJpegWorker = null;
+  });
+  mozJpegWorker = worker;
+  return worker;
+}
+
+function canvasToMozJpeg(canvas, maxSize) {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const id = ++mozJpegRequestId;
+  return new Promise((resolve, reject) => {
+    mozJpegRequests.set(id, { resolve, reject });
+    try {
+      getMozJpegWorker().postMessage({
+        id,
+        pixels: imageData.data.buffer,
+        width: imageData.width,
+        height: imageData.height,
+        maxSize
+      }, [imageData.data.buffer]);
+    } catch (error) {
+      mozJpegRequests.delete(id);
+      reject(error);
+    }
+  });
+}
+
 function formatBytes(bytes) {
   if (!Number.isFinite(bytes)) return "无限制";
   if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(2)} MB`;
@@ -2434,6 +2495,27 @@ function makeDetailReducedCanvas(sourceCanvas, scale) {
 }
 
 async function canvasToCompressedJpeg(canvas, maxSize) {
+  try {
+    const fullSizeResult = await canvasToMozJpeg(canvas, maxSize);
+    if (fullSizeResult.meetsLimit) {
+      return new Blob([fullSizeResult.buffer], { type: "image/jpeg" });
+    }
+
+    const detailScales = [0.88, 0.76, 0.64, 0.54, 0.46, 0.38, 0.32, 0.26];
+    let smallestResult = fullSizeResult;
+    for (const scale of detailScales) {
+      const reducedCanvas = makeDetailReducedCanvas(canvas, scale);
+      const result = await canvasToMozJpeg(reducedCanvas, maxSize);
+      if (result.size < smallestResult.size) smallestResult = result;
+      if (result.meetsLimit) {
+        return new Blob([result.buffer], { type: "image/jpeg" });
+      }
+    }
+    return new Blob([smallestResult.buffer], { type: "image/jpeg" });
+  } catch (error) {
+    console.warn("MozJPEG 不可用，改用浏览器原生 JPEG 编码器。", error);
+  }
+
   const qualities = [0.92, 0.86, 0.8, 0.74, 0.68, 0.62, 0.56, 0.5, 0.44, 0.38, 0.32, 0.26, 0.22, 0.18, 0.14, 0.1, 0.07, 0.05];
   let bestBlob = null;
 
@@ -2473,12 +2555,14 @@ async function exportTemplateBlob(template) {
     if (Number.isFinite(template.maxSize) && blob.size > template.maxSize) {
       throw makeExportSizeError(template, blob);
     }
+    console.info(`[导出] ${template.file}: ${formatBytes(blob.size)} / ${formatBytes(template.maxSize)}`);
     return blob;
   }
   const blob = await canvasToCompressedJpeg(canvas, template.maxSize);
   if (blob.size > template.maxSize) {
     throw makeExportSizeError(template, blob);
   }
+  console.info(`[导出] ${template.file}: ${formatBytes(blob.size)} / ${formatBytes(template.maxSize)}`);
   return blob;
 }
 
